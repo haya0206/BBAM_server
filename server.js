@@ -1,3 +1,4 @@
+// 서버 코드
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -11,4 +12,13 @@ app.post("/asdf", (req, res) => {
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
-// commit test
+// connection.connect();
+
+// connection.query('SELECT * from test', function(err, rows, fields) {
+//   if(!err)
+//     console.log('The solution is: ', rows);
+//   else
+//     console.log('Error while performing Query.', err);
+// });
+
+// connection.end();
