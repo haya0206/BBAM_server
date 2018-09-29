@@ -10,6 +10,29 @@ app.post("/asdf", (req, res) => {
   res.status(200).json("success");  
 });
 
+var mysql      = require('mysql');
+var connection = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'root',
+  password : 'cosmos0',
+  port     : 3306,
+  database : 'BBAM'
+});
+
+connection.query('SELECT * FROM USR_INFO', function(err, rows, fields) {
+  if(!err) {
+      console.log("<<문제 정보>>");
+      console.log(rows);
+  }
+  else {
+      console.log('Error while performing Query. - 사용자 신상 정보', err);
+  }
+});
+
+connection.end();
+
+connection.connect();
+
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
 // connection.connect();
