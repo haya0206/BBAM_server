@@ -1,51 +1,150 @@
+const express = require('express');
+const cors = require('cors');
+const session = require('express-session');
 const Sequelize = require('sequelize');
-
 const sequelize = new Sequelize(
     'BBAM',
     'root',
-    'cosmos0',
+    'bbam',
     {
-        'host': 'localhost', // host를 AWS 서버로 변경해야함
+        'host': '13.125.181.57', // host를 AWS 서버로 변경해야함
         'dialect': 'mysql',
         define: {
-            freezeTableName: true
+            freezeTableName: true,
+            timestamps: false
         }
     }
 );
-
 sequelize.authenticate().then(() => {
     console.log('Connection has been established successfully.');
 }).catch(err => {
     console.error('Unable to connect to database:', err);
 });
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
 
-const GM_INFO = sequelize.define('GM_INFO', {
-    GM_ID: {
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(session({
+    secret: '123',
+    resave: false,
+    saveUninitialized: true
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser(function(user, done) {
+    done(null, user.id);
+});
+  
+passport.deserializeUser(function(id, done) {
+    console.log('deserializeUser', id)
+    return done(null, [{id:'test', pw:'1234'}]);
+});
+
+const port = process.env.PORT || 5000;
+
+// 테스트 코드
+const USR = sequelize.define('USR', {
+    USR_ID: {
         type: Sequelize.STRING(10),
         primaryKey: true,
         allowNull: false
     },
-    GM_LV: {
-        type: Sequelize.TINYINT,
-        defaultValue: 1
+    USR_PW: {
+        type: Sequelize.STRING(20),
+        allowNull: false
     },
-    GM_EXP: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0
+    USR_NM: {
+        type: Sequelize.STRING(20),
+        allowNull: false
     },
-    GM_RTN: {
-        type: Sequelize.INTEGER
+    USR_ADDR_ST: {
+        type: Sequelize.STRING(10)
+    },
+    USR_ADDR_CT: {
+        type: Sequelize.STRING(20)
+    },
+    USR_ADDR_STRT: {
+        type: Sequelize.STRING(20)
+    },
+    USR_SCHL: {
+        type: Sequelize.STRING(20)
+    },
+    USR_GRD: {
+        type: Sequelize.TINYINT
+    },
+    USR_JNDT: {
+        type: 'DATETIME',
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
     }
-}, {
-    timestamps: false
 });
 
-GM_INFO.sync({force: false}).then(() => {
-    return GM_INFO.create({
-        GM_ID: 'TEST',
-        GM_RTN: 1000
+// const GM_INFO = sequelize.define('GM_INFO', {
+//     GM_ID: {
+//         type: Sequelize.STRING(10),
+//         primaryKey: true,
+//         allowNull: false
+//     },
+//     GM_LV: {
+//         type: Sequelize.TINYINT,
+//         defaultValue: 1
+//     },
+//     GM_EXP: {
+//         type: Sequelize.INTEGER,
+//         defaultValue: 0
+//     },
+//     GM_RTN: {
+//         type: Sequelize.INTEGER
+//     }
+// }, {
+//     timestamps: false
+// });
+
+USR.findAll()
+    .then(results => {
+        console.log(results);
+    })
+    .catch(err => {
+        console.log(err);
     });
+
+app.post("/login", (req, res) => {
+    res.status(200).json("success");
 });
+
+app.listen(port, () => console.log(`Listening on port ${port}`));
+
+
+
+// const GM_INFO = sequelize.define('GM_INFO', {
+//     GM_ID: {
+//         type: Sequelize.STRING(10),
+//         primaryKey: true,
+//         allowNull: false
+//     },
+//     GM_LV: {
+//         type: Sequelize.TINYINT,
+//         defaultValue: 1
+//     },
+//     GM_EXP: {
+//         type: Sequelize.INTEGER,
+//         defaultValue: 0
+//     },
+//     GM_RTN: {
+//         type: Sequelize.INTEGER
+//     }
+// }, {
+//     timestamps: false
+// });
+
+// GM_INFO.sync({force: false}).then(() => {
+//     return GM_INFO.create({
+//         GM_ID: 'TEST',
+//         GM_RTN: 1000
+//     });
+// });
 
 // GM_INFO.create({
 //     GM_ID: 'TEST',

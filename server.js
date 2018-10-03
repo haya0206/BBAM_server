@@ -1,10 +1,20 @@
 // 서버 코드
 const express = require("express");
 const cors = require("cors");
+//const session = require('express-session');
+//const passport = require('passport');
+//const passportConfig = require('./passport');
 const app = express();
-const port = process.env.PORT || 5000;
+
+//app.use(session({secret: 'ABC', resave: true, saveUninitialized: false}));
+//app.use(passport.initialize());
+//app.use(passport.session());
+//passportConfig();
 app.use(cors());
 app.use(express.json());
+
+const port = process.env.PORT || 5000;
+
 app.post("/asdf", (req, res) => {
   console.log(req.body); //undefined
 
@@ -65,7 +75,7 @@ app.post("/asdf", (req, res) => {
   }
   console.log(parsingCode);
   
-  res.status(200).json("success");  
+  res.status(200).json("success");
 });
 
 // var mysql      = require('mysql');
