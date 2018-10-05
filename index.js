@@ -1,13 +1,13 @@
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session');
+// const session = require('express-session');
 const Sequelize = require('sequelize');
 const sequelize = new Sequelize(
     'BBAM',
     'root',
     'bbam',
     {
-        'host': '13.125.181.57', // host를 AWS 서버로 변경해야함
+        'host': '13.125.181.57',
         'dialect': 'mysql',
         define: {
             freezeTableName: true,
@@ -20,28 +20,28 @@ sequelize.authenticate().then(() => {
 }).catch(err => {
     console.error('Unable to connect to database:', err);
 });
-var passport = require('passport');
-var LocalStrategy = require('passport-local').Strategy;
+// var passport = require('passport');
+// var LocalStrategy = require('passport-local').Strategy;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(session({
-    secret: '123',
-    resave: false,
-    saveUninitialized: true
-}));
-app.use(passport.initialize());
-app.use(passport.session());
+// app.use(session({
+//     secret: '123',
+//     resave: false,
+//     saveUninitialized: true
+// }));
+// app.use(passport.initialize());
+// app.use(passport.session());
 
-passport.serializeUser(function(user, done) {
-    done(null, user.id);
-});
+// passport.serializeUser(function(user, done) {
+//     done(null, user.id);
+// });
   
-passport.deserializeUser(function(id, done) {
-    console.log('deserializeUser', id)
-    return done(null, [{id:'test', pw:'1234'}]);
-});
+// passport.deserializeUser(function(id, done) {
+//     console.log('deserializeUser', id)
+//     return done(null, [{id:'test', pw:'1234'}]);
+// });
 
 const port = process.env.PORT || 5000;
 
@@ -76,12 +76,41 @@ const USR = sequelize.define('USR', {
         type: Sequelize.TINYINT
     },
     USR_JNDT: {
-        type: 'DATETIME',
+        type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
     }
 });
 
-// const GM_INFO = sequelize.define('GM_INFO', {
+const PRB = sequelize.define('PRB', {
+    PRB_ID: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        allowNull: false
+    },
+    PRB_DIFF: {
+        type: Sequelize.TINYINT(1)
+    },
+    PRB_CLS: {
+        type: Sequelize.STRING(10)
+    },
+    PRB_CNT: {
+        type: Sequelize.STRING(500)
+    },
+    PRB_HNT: {
+        type: Sequelize.STRING(500)
+    },
+    PRB_IN: {
+        type: Sequelize.STRING(100)
+    },
+    PRB_OUT: {
+        type: Sequelize.STRING(100)
+    },
+    PRB_RTN: {
+        type: Sequelize.INTEGER
+    }
+});
+
+// const GM = sequelize.define('GM', {
 //     GM_ID: {
 //         type: Sequelize.STRING(10),
 //         primaryKey: true,
@@ -98,11 +127,12 @@ const USR = sequelize.define('USR', {
 //     GM_RTN: {
 //         type: Sequelize.INTEGER
 //     }
-// }, {
-//     timestamps: false
 // });
 
-USR.findAll()
+app.post('/login', (req, res) => {
+    // console.log(req.body);
+
+    USR.findAll()
     .then(results => {
         console.log(results);
     })
@@ -110,8 +140,48 @@ USR.findAll()
         console.log(err);
     });
 
-app.post("/login", (req, res) => {
     res.status(200).json("success");
+});
+
+app.post('/problem', (req, res) => {
+    var diff = req.body.diff;
+    var cls = req.body.cls;
+
+    PRB.findAll({
+        attributes: ['PRB_CNT', 'PRB_HNT'],
+        where: {
+            PRB_DIFF: diff,
+            PRB_CLS: cls
+        }
+    })
+    .then(results => 
+        results && results.length && results.length > 0
+        ? results[0]
+        : {
+            PRB_CNT: "문제가 없습니다.",
+            PRB_HNT: "문제가 없습니다."
+        }
+    )
+    .then(dataValues => {
+        console.log(dataValues);
+        res.status(200).json(dataValues);
+    })
+    .catch(err => {
+        console.log(err);
+    })
+    
+    // console.log(result);
+    // res.status(200).json(result);
+});
+
+app.post('./gm', (req, res) => {
+    GM.findAll()
+    .then(results => {
+        console.log(results);
+    })
+    .catch(err => {
+        console.log(err);
+    });
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

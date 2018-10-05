@@ -1,15 +1,16 @@
 // 서버 코드
 const express = require("express");
 const cors = require("cors");
-//const session = require('express-session');
-//const passport = require('passport');
-//const passportConfig = require('./passport');
+// const session = require('express-session');
+// const route = require('./route.js');
+// const passport = require('passport');
+// const passportConfig = require('./passport');
 const app = express();
 
-//app.use(session({secret: 'ABC', resave: true, saveUninitialized: false}));
-//app.use(passport.initialize());
-//app.use(passport.session());
-//passportConfig();
+// app.use(session({secret: 'ABC', resave: true, saveUninitialized: false}));
+// app.use(passport.initialize());
+// app.use(passport.session());
+// passportConfig();
 app.use(cors());
 app.use(express.json());
 
@@ -78,6 +79,12 @@ app.post("/asdf", (req, res) => {
   res.status(200).json("success");
 });
 
+app.post('/problem', (req, res) => {
+  console.log(req.body);
+
+  res.status(200).json('problem');
+});
+
 // app.post('/login', (req, res) => {
 //   console.log(req.body);
 
@@ -108,6 +115,10 @@ app.post("/asdf", (req, res) => {
 // connection.connect();
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
+
+// app.listen(port, () => {
+//   console.log(`Express App on port ${port}`);
+// });
 
 // connection.connect();
 
