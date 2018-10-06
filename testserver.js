@@ -51,23 +51,23 @@ const USR = sequelize.define('USR', {
         type: Sequelize.STRING(20)
     },
     USR_GRD: {
-        type: Sequelize.TINYINT
+        type: Sequelize.TINYINT(1).UNSIGNED
     },
     USR_JNDT: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        type: Sequelize.DATE(3),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
     }
 });
 
 const PRB = sequelize.define('PRB', {
     PRB_ID: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         allowNull: false,
         autoIncrement: true
     },
     PRB_DIFF: {
-        type: Sequelize.TINYINT(1)
+        type: Sequelize.TINYINT(1).UNSIGNED
     },
     PRB_CLS: {
         type: Sequelize.STRING(10)
@@ -89,11 +89,37 @@ const PRB = sequelize.define('PRB', {
     }
 });
 
+const USR_PRB = sequelize.define('USR_PRB', {
+    UP_UID: {
+        type: Sequelize.STRING(10),
+        primaryKey: true,
+        allowNull: false
+    },
+    UP_PID: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        allowNull: false
+    },
+    UP_SSEQ: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        allowNull: false
+    },
+    UP_CRCT: {
+        type: Sequelize.TINYINT(1)
+    },
+    UP_DTM: {
+        type: Sequelize.DATE(3),
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
+    }
+});
+
 const LOG = sequelize.define('LOG', {
     LOG_DTM: {
-        type: Sequelize.DATE,
+        type: Sequelize.DATE(3),
+        primaryKey: true,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
     },
     LOG_UID: {
         type: Sequelize.STRING(10),
@@ -101,27 +127,29 @@ const LOG = sequelize.define('LOG', {
         allowNull: false
     },
     LOG_PID: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         allowNull: false
     },
     LOG_SSEQ: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         allowNull: false
     },
-    // 같은 문제에서 몇 번째로 들어오는 로그인가 -> performance
+    // 같은 문제에서 몇 번째로 들어오는 로그인가 -> performance 상 문제가 없는가
     LOG_SEQ: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        allowNull: false
     },
     LOG_ETP: {
         type: Sequelize.STRING(10)
     },
     LOG_BID: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER.UNSIGNED
     },
     LOG_BUPID: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER.UNSIGNED
     },
     LOG_BTP: {
         type: Sequelize.STRING(20)
@@ -134,22 +162,38 @@ const LOG = sequelize.define('LOG', {
 app.post("/asdf", (req, res) => {
     let code = req.body.code.split("\n");
 
-    let parsingCode = [
-        {
-            UID: "",
-            PID: 0,
-            ETP: "",
-            BID: 0,
-            BUPID: 0,
-            BTP: "",
-            BVL: ""
-        }
+    // 사용할 default 값
+    let parsingCodes = [
+        // {
+        //     UID: "",
+        //     PID: 0,
+        //     ETP: "",
+        //     BID: 0,
+        //     BUPID: 0,
+        //     BTP: "",
+        //     BVL: ""
+        // }
     ];
+    // 현재 테스트하는 값
+    // let parsingCode = [
+    //     {
+    //         UID: "PSB",
+    //         PID: 1,
+    //         ETP: "",
+    //         BID: 0,
+    //         BUPID: 0,
+    //         BTP: "",
+    //         BVL: ""
+    //     }
+    // ];
     let parentId = [0];
     let preDepth = 0;
     const codeLength = code.length;
     for (let i = 0; i < codeLength - 1; i++) {
         let parsing = {};
+        parsing.UID = req.body.UID;
+        parsing.PID = req.body.PID;
+        parsing.ETP = req.body.ETP;
         // id 설정
         parsing.BID = i + 1;
         // depth 계산
@@ -192,25 +236,27 @@ app.post("/asdf", (req, res) => {
             parsing.BTP = "PASS";
             parsing.BVL = "";
         }
-        parsing.ETP = req.body.ETP;
-        parsing.PID = req.body.PID;
-        parsing.UID = req.body.UID;
-        parsingCode.push(parsing);
+        parsingCodes.push(parsing);
     }
-    console.log(parsingCode);
+    //console.log(parsingCodes);
 
-    // parsing이 됐다고 가정하고 DB에 저장
     // LOG_SSEQ와 LOG_SEQ는 별도의 공정이 필요, Mysql의 SELECT 역할을 하는 Sequelize 기능 필요, 현재는 임의의 값
-    LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: 1,
-    LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
-    .then(result => {
-        res.status(200).json(result);
+    // LOG_SSEQ를 알아낸 다음에 LOG를 INSERT해야 함
+    // LOG.findAll()...
+
+    parsingCodes.forEach((parsingCode, index) => {
+        LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: 1,
+            LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
+        .then(result => {
+            // console.log(result);
+            if(index === parsingCodes.length - 1) {
+                res.status(200).json("Log Insert Success");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+        })
     })
-    .catch(err => {
-        console.error(err);
-    })
-    
-    // res.status(200).json("success");
 });
 
 app.post('/problemList', (req, res) => {
