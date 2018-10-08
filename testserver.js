@@ -243,11 +243,81 @@ app.post("/asdf", (req, res) => {
     // LOG_SSEQ와 LOG_SEQ는 별도의 공정이 필요, Mysql의 SELECT 역할을 하는 Sequelize 기능 필요, 현재는 임의의 값
     // LOG_SSEQ를 알아낸 다음에 LOG를 INSERT해야 함
     // LOG.findAll()...
+    // USR_PRB.findAll({
+    //     attributes: [sequelize.fn('max', sequelize.col('UP_SSEQ'))],
+    //     where: {
+    //         UP_UID: req.body.UID,
+    //         UP_PID: req.body.PID,
+    //     }
+    // })
+    // .then(results =>
+    //     results && results.length && results.length > 0
+    //     ? results
+    //     : {
+    //         UP_SSEQ: 1
+    //     }
+    // )
+    // .then(dataValues  => {
+    //     console.log(dataValues);
+    // })
+    // .catch(err => {
+    //     console.log(err);
+    // })
+    USR_PRB.max('UP_SSEQ', {
+        where: {
+            UP_UID: req.body.UID,
+            UP_PID: req.body.PID
+        }
+    })
+    .then(result =>
+        result
+        ? result
+        : 1
+    )
+    .then(dataValue => {
+        parsingCodes.forEach((parsingCode, index) => {
+            LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: dataValue + 1, LOG_SEQ: index + 1,
+                LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
+            .then(() => {
+                if(index === parsingCodes.length - 1) {
+                    res.status(200).json("Log Insert Success");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+            })
+        })
+    })
+    .catch(err => {
+        console.err(err);
+    })
+    // .then(result => {
+    //     if(!result)
+    //         console.log("?!?!?");
+    //     console.log(result);
+    //     res.status(200).json("hmm...");
+    // })
+    // .then(results =>
+    //     results && results.length && results.length > 0
+    //     ? results
+    //     : {
+    //         UP_SSEQ: 1
+    //     }
+    // )
+    // .then(dataValues  => {
+    //     console.log(dataValues);
+    //     res.status(200).json("Success");
+    // })
+    // .catch(err => {
+    //     console.log(err);
+    // })
+
 
     // SEQ도 올라가도록 넣어야 함, 또는 AUTO_INCREASE를 한 뒤, 다음 로그 때 1부터 시작하도록 설정해보기
     // 현재 0.001초가 겹치기에 SEQ를 증가시키지 않으면 Primary Key가 겹침
+    // -> parsingCodes에 있는 parsingCode들이 배열로 있으므로 index 연산으로 간단히 해결
     // parsingCodes.forEach((parsingCode, index) => {
-    //     LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: 1,
+    //     LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: index + 1,
     //         LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
     //     .then(result => {
     //         // console.log(result);
@@ -259,20 +329,6 @@ app.post("/asdf", (req, res) => {
     //         console.error(err);
     //     })
     // })
-    // test 코드
-    parsingCodes.forEach((parsingCode, index) => {
-        LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: Math.random() * 10000,
-            LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
-        .then(result => {
-            // console.log(result);
-            if(index === parsingCodes.length - 1) {
-                res.status(200).json("Log Insert Success");
-            }
-        })
-        .catch(err => {
-            console.error(err);
-        })
-    })
 });
 
 app.post('/problemList', (req, res) => {
@@ -282,7 +338,7 @@ app.post('/problemList', (req, res) => {
     PRB.findAll({
         attributes: ['PRB_CNT', 'PRB_HNT'],
         where: {
-            PRB_diff: diff,
+            PRB_DIFF: diff,
             PRB_CLS: cls
         }
     })
