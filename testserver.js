@@ -244,8 +244,24 @@ app.post("/asdf", (req, res) => {
     // LOG_SSEQ를 알아낸 다음에 LOG를 INSERT해야 함
     // LOG.findAll()...
 
+    // SEQ도 올라가도록 넣어야 함, 또는 AUTO_INCREASE를 한 뒤, 다음 로그 때 1부터 시작하도록 설정해보기
+    // 현재 0.001초가 겹치기에 SEQ를 증가시키지 않으면 Primary Key가 겹침
+    // parsingCodes.forEach((parsingCode, index) => {
+    //     LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: 1,
+    //         LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
+    //     .then(result => {
+    //         // console.log(result);
+    //         if(index === parsingCodes.length - 1) {
+    //             res.status(200).json("Log Insert Success");
+    //         }
+    //     })
+    //     .catch(err => {
+    //         console.error(err);
+    //     })
+    // })
+    // test 코드
     parsingCodes.forEach((parsingCode, index) => {
-        LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: 1,
+        LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: 1, LOG_SEQ: Math.random() * 10000,
             LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
         .then(result => {
             // console.log(result);
