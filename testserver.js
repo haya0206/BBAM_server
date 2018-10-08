@@ -159,7 +159,90 @@ const LOG = sequelize.define('LOG', {
     }
 });
 
-app.post("/asdf", (req, res) => {
+app.post('/problemList', (req, res) => {
+    var diff = req.body.diff;
+    var cls = req.body.cls;
+
+    PRB.findAll({
+        attributes: ['PRB_ID'],
+        where: {
+            PRB_DIFF: diff,
+            PRB_CLS: cls
+        }
+    })
+    .then(results =>
+        results && results.length && results.length > 0
+        ? results
+        : {
+            PRB_ID: 0
+        }
+    )
+    .then(dataValues => {
+        console.log(dataValues);
+        res.status(200).json(dataValues);
+    })
+    .catch(err => {
+        console.log(err);
+    })
+});
+
+app.post("/problem", (req, res) => {
+    var id = req.body.id;
+
+    PRB.findAll({
+        attributes: ['PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT'],
+        where: {
+            PRB_ID: id
+        }
+    })
+    .then(results =>
+        results && results.length && results.length > 0
+        ? results
+        : {
+            PRB_CNT: "문제가 없습니다.",
+            PRB_HNT: "문제가 없습니다.",
+            PRB_IN: null,
+            PRB_OUT: null
+        }
+    )
+    .then(dataValues => {
+        console.log(dataValues);
+        res.status(200).json(dataValues);
+    })
+    .catch(err => {
+        console.log(err);
+    })
+});
+
+app.post("./submit", (req, res) => {
+    var uid = req.body.UID;
+    var pid = req.body.PID;
+    var crct = req.body.crct;
+
+    // SSEQ 가져와야 함
+    USR_PRB.max('UP_SSEQ', {
+        where: {
+            UP_UID: req.body.UID,
+            UP_PID: req.body.PID
+        }
+    })
+    .then(result =>
+        result
+            ? result
+            : 1
+    )
+    .then(dataValue => {
+        LOG.create({ UP_UID: uid, UP_PID: pid, UP_SSEQ: dataValue, UP_CRCT: crct })
+        .then(() => {
+            res.status(200).json("Submit Success");
+        })
+        .catch(err => {
+            console.error(err);
+        })
+    })
+});
+
+app.post("/log", (req, res) => {
     let code = req.body.code.split("\n");
 
     // 사용할 default 값
@@ -329,34 +412,6 @@ app.post("/asdf", (req, res) => {
     //         console.error(err);
     //     })
     // })
-});
-
-app.post('/problemList', (req, res) => {
-    var diff = req.body.diff;
-    var cls = req.body.cls;
-
-    PRB.findAll({
-        attributes: ['PRB_CNT', 'PRB_HNT'],
-        where: {
-            PRB_DIFF: diff,
-            PRB_CLS: cls
-        }
-    })
-    .then(results =>
-        results && results.length && results.length > 0
-        ? results
-        : {
-            PRB_CNT: "문제가 없습니다.",
-            PRB_HNT: "문제가 없습니다."
-        }
-    )
-    .then(dataValues => {
-        console.log(dataValues);
-        res.status(200).json(dataValues);
-    })
-    .catch(err => {
-        console.log(err);
-    })
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
