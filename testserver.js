@@ -159,6 +159,7 @@ const LOG = sequelize.define('LOG', {
     }
 });
 
+// 난이도, 단원 선택 이후 문제 리스트 보기(return 문제 ID)
 app.post('/problemList', (req, res) => {
     var diff = req.body.diff;
     var cls = req.body.cls;
@@ -186,7 +187,8 @@ app.post('/problemList', (req, res) => {
     })
 });
 
-app.post("/problem", (req, res) => {
+// 문제 리스트에서 문제 선택했을 시 문제 정보 전달(return 문제 내용, 문제 힌트, 입력값, 출력값)
+app.post('/problem', (req, res) => {
     var id = req.body.id;
 
     PRB.findAll({
@@ -214,7 +216,8 @@ app.post("/problem", (req, res) => {
     })
 });
 
-app.post("./submit", (req, res) => {
+// 문제를 제출하고 채점받은 결과를 저장
+app.post('/submit', (req, res) => {
     var uid = req.body.UID;
     var pid = req.body.PID;
     var crct = req.body.crct;
@@ -222,17 +225,22 @@ app.post("./submit", (req, res) => {
     // SSEQ 가져와야 함
     USR_PRB.max('UP_SSEQ', {
         where: {
-            UP_UID: req.body.UID,
-            UP_PID: req.body.PID
+            UP_UID: uid,
+            UP_PID: pid
         }
     })
     .then(result =>
         result
-            ? result
-            : 1
+        ? result
+        : 0
     )
     .then(dataValue => {
-        LOG.create({ UP_UID: uid, UP_PID: pid, UP_SSEQ: dataValue, UP_CRCT: crct })
+        USR_PRB.create({
+            UP_UID: uid,
+            UP_PID: pid,
+            UP_SSEQ: dataValue + 1,
+            UP_CRCT: crct
+        })
         .then(() => {
             res.status(200).json("Submit Success");
         })
@@ -303,6 +311,9 @@ app.post("/log", (req, res) => {
         if (codeSplit[0] === "if") {
             parsing.BTP = "IF";
             parsing.BVL = code[i].slice(3, -1);
+        } else if (codeSplit[0] === "else:") {
+            parsing.BTP = "ELSE";
+            parsing.BVL = "";
         } else if (codeSplit[0] === "while") {
             parsing.BTP = "WHILE";
             parsing.BVL = code[i].slice(6, -1);
@@ -355,12 +366,21 @@ app.post("/log", (req, res) => {
     .then(result =>
         result
         ? result
-        : 1
+        : 0
     )
     .then(dataValue => {
         parsingCodes.forEach((parsingCode, index) => {
-            LOG.create({LOG_UID: parsingCode.UID, LOG_PID: parsingCode.PID, LOG_SSEQ: dataValue + 1, LOG_SEQ: index + 1,
-                LOG_ETP: parsingCode.ETP, LOG_BID: parsingCode.BID, LOG_BUPID: parsingCode.BUPID, LOG_BTP: parsingCode.BTP, LOG_BVL: parsingCode.BVL})
+            LOG.create({
+                LOG_UID: parsingCode.UID,
+                LOG_PID: parsingCode.PID,
+                LOG_SSEQ: dataValue + 1,
+                LOG_SEQ: index + 1,
+                LOG_ETP: parsingCode.ETP,
+                LOG_BID: parsingCode.BID,
+                LOG_BUPID: parsingCode.BUPID,
+                LOG_BTP: parsingCode.BTP,
+                LOG_BVL: parsingCode.BVL
+            })
             .then(() => {
                 if(index === parsingCodes.length - 1) {
                     res.status(200).json("Log Insert Success");
