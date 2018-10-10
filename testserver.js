@@ -2,11 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const Sequelize = require('sequelize');
 const sequelize = new Sequelize(
-    'BBAM',
-    'root',
-    'bbam',
+    '',
+    '',
+    '',
     {
-        'host': '13.125.181.57',
+        'host': '',
         'dialect': 'mysql',
         define: {
             freezeTableName: true,
@@ -165,12 +165,14 @@ const LOG = sequelize.define('LOG', {
 });
 
 // 난이도, 단원 선택 이후 문제 리스트 보기(return 문제 ID)
+// 현재 단원을 받는 대신에 단원을 반환해 주어야 함 -> 미구현된 프론트 부분을 대체하는 식
+// 또한 풀었는지 여부를 보내달라고 함                                                       // 구현해야함
 app.post('/problemList', (req, res) => {
     var diff = req.body.diff;
     // var cls = req.body.cls;
 
     PRB.findAll({
-        attributes: ['PRB_CLS', 'PRB_ID'],
+        attributes: ['PRB_ID', 'PRB_CLS'],
         where: {
             PRB_DIFF: diff//,
             // PRB_CLS: cls
@@ -180,7 +182,8 @@ app.post('/problemList', (req, res) => {
         results && results.length && results.length > 0
         ? results
         : {
-            PRB_ID: 0
+            PRB_ID: 0,
+            PRB_CLS: null // 임시로 추가
         }
     )
     .then(dataValues => {
@@ -193,11 +196,12 @@ app.post('/problemList', (req, res) => {
 });
 
 // 문제 리스트에서 문제 선택했을 시 문제 정보 전달(return 문제 내용, 문제 힌트, 입력값, 출력값)
+// 문제에서 사용하는 XML도 보내기
 app.post('/problem', (req, res) => {
     var id = req.body.id;
 
     PRB.findAll({
-        attributes: ['PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT'],
+        attributes: ['PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
         where: {
             PRB_ID: id
         }
@@ -209,7 +213,8 @@ app.post('/problem', (req, res) => {
             PRB_CNT: "문제가 없습니다.",
             PRB_HNT: "문제가 없습니다.",
             PRB_IN: null,
-            PRB_OUT: null
+            PRB_OUT: null,
+            PRB_XML: null
         }
     )
     .then(dataValues => {
