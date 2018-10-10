@@ -86,6 +86,10 @@ const PRB = sequelize.define('PRB', {
     },
     PRB_RTN: {
         type: Sequelize.INTEGER
+    },
+    PRB_XML: {
+        type: Sequelize.STRING(1000),
+        allowNull: false
     }
 });
 
@@ -115,12 +119,6 @@ const USR_PRB = sequelize.define('USR_PRB', {
 });
 
 const LOG = sequelize.define('LOG', {
-    LOG_DTM: {
-        type: Sequelize.DATE(3),
-        primaryKey: true,
-        allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
-    },
     LOG_UID: {
         type: Sequelize.STRING(10),
         primaryKey: true,
@@ -136,17 +134,24 @@ const LOG = sequelize.define('LOG', {
         primaryKey: true,
         allowNull: false
     },
-    // 같은 문제에서 몇 번째로 들어오는 로그인가 -> performance 상 문제가 없는가
     LOG_SEQ: {
         type: Sequelize.INTEGER.UNSIGNED,
         primaryKey: true,
         allowNull: false
     },
+    LOG_DTM: {
+        type: Sequelize.DATE(3),
+        primaryKey: true,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
+    },
     LOG_ETP: {
         type: Sequelize.STRING(10)
     },
     LOG_BID: {
-        type: Sequelize.INTEGER.UNSIGNED
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        allowNull: false
     },
     LOG_BUPID: {
         type: Sequelize.INTEGER.UNSIGNED
@@ -162,13 +167,13 @@ const LOG = sequelize.define('LOG', {
 // 난이도, 단원 선택 이후 문제 리스트 보기(return 문제 ID)
 app.post('/problemList', (req, res) => {
     var diff = req.body.diff;
-    var cls = req.body.cls;
+    // var cls = req.body.cls;
 
     PRB.findAll({
-        attributes: ['PRB_ID'],
+        attributes: ['PRB_CLS', 'PRB_ID'],
         where: {
-            PRB_DIFF: diff,
-            PRB_CLS: cls
+            PRB_DIFF: diff//,
+            // PRB_CLS: cls
         }
     })
     .then(results =>
@@ -284,6 +289,7 @@ app.post("/log", (req, res) => {
         let parsing = {};
         parsing.UID = req.body.UID;
         parsing.PID = req.body.PID;
+        parsing.SEQ = req.body.SEQ;
         parsing.ETP = req.body.ETP;
         // id 설정
         parsing.BID = i + 1;
@@ -374,7 +380,7 @@ app.post("/log", (req, res) => {
                 LOG_UID: parsingCode.UID,
                 LOG_PID: parsingCode.PID,
                 LOG_SSEQ: dataValue + 1,
-                LOG_SEQ: index + 1,
+                LOG_SEQ: parsingCode.SEQ,
                 LOG_ETP: parsingCode.ETP,
                 LOG_BID: parsingCode.BID,
                 LOG_BUPID: parsingCode.BUPID,
