@@ -201,7 +201,7 @@ app.post('/problem', (req, res) => {
     var id = req.body.id;
 
     PRB.findAll({
-        attributes: ['PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
+        attributes: ['PRB_DIFF', 'PRB_CLS', 'PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
         where: {
             PRB_ID: id
         }
