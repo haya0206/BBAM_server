@@ -2,11 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const Sequelize = require('sequelize');
 const sequelize = new Sequelize(
-    '',
-    '',
-    '',
+    'BBAM',
+    'root',
+    'bbam',
     {
-        'host': '',
+        'host': '54.180.2.31',
         'dialect': 'mysql',
         define: {
             freezeTableName: true,
@@ -198,31 +198,66 @@ app.post('/problemList', (req, res) => {
 // 문제 리스트에서 문제 선택했을 시 문제 정보 전달(return 문제 내용, 문제 힌트, 입력값, 출력값)
 // 문제에서 사용하는 XML도 보내기
 app.post('/problem', (req, res) => {
-    var id = req.body.id;
+    var uid = req.body.UID;
+    var pid = req.body.PID;
 
-    PRB.findAll({
-        attributes: ['PRB_DIFF', 'PRB_CLS', 'PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
+    USR_PRB.max('UP_SSEQ', {
         where: {
-            PRB_ID: id
+            UP_UID: uid,
+            UP_PID: pid
         }
     })
-    .then(results =>
-        results && results.length && results.length > 0
-        ? results
-        : {
-            PRB_CNT: "문제가 없습니다.",
-            PRB_HNT: "문제가 없습니다.",
-            PRB_IN: null,
-            PRB_OUT: null,
-            PRB_XML: null
-        }
+    .then(result =>
+        result
+        ? result
+        : 0
     )
-    .then(dataValues => {
-        console.log(dataValues);
-        res.status(200).json(dataValues);
-    })
-    .catch(err => {
-        console.log(err);
+    .then(seq => {
+        USR_PRB.findAll({
+            attributes: ['UP_XML'],
+            where: {
+                UP_UID: uid,
+                UP_PID: pid,
+                UP_SSEQ: seq
+            }
+        })
+        .then(result =>
+            result && result.length && result.length > 0
+            ? result
+            : null
+        )
+        .then(xml => {
+            PRB.findAll({
+                attributes: ['PRB_DIFF', 'PRB_CLS', 'PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
+                where: {
+                    PRB_ID: pid
+                }
+            })
+            .then(results =>
+                results && results.length && results.length > 0
+                ? results
+                : {
+                    PRB_CNT: "문제가 없습니다.",
+                    PRB_HNT: "문제가 없습니다.",
+                    PRB_IN: null,
+                    PRB_OUT: null,
+                    PRB_XML: null
+                }
+            )
+            .then(dataValues => {
+                if(xml === null) {
+                    dataValues.push({"UP_XML": null});
+                }
+                else {
+                    dataValues.push(xml[0]);
+                }
+                //console.log(dataValues);
+                res.status(200).json(dataValues);
+            })
+            .catch(err => {
+                console.log(err);
+            })
+        })
     })
 });
 
