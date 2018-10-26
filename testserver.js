@@ -7,7 +7,7 @@ const sequelize = new Sequelize(
     '',
     {
         'host': '',
-        'dialect': '',
+        'dialect': 'mysql',
         define: {
             freezeTableName: true,
             timestamps: false
@@ -34,6 +34,9 @@ const USR = sequelize.define('USR', {
         type: Sequelize.STRING(20),
         allowNull: false
     },
+    USR_NCK: {
+        type: Sequelize.STRING(20)
+    },
     USR_NM: {
         type: Sequelize.STRING(20),
         allowNull: false
@@ -59,6 +62,21 @@ const USR = sequelize.define('USR', {
     }
 });
 
+const GM = sequelize.define('GM', {
+    GM_ID: {
+        type: Sequelize.STRING(10),
+        primaryKey: true,
+        allowNull: false
+    },
+    GM_EXP: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        defaultValue: 0
+    },
+    GM_RTN: {
+        type: Sequelize.INTEGER.UNSIGNED
+    }
+});
+
 const PRB = sequelize.define('PRB', {
     PRB_ID: {
         type: Sequelize.INTEGER.UNSIGNED,
@@ -78,18 +96,31 @@ const PRB = sequelize.define('PRB', {
     PRB_HNT: {
         type: Sequelize.STRING(500)
     },
-    PRB_IN: {
-        type: Sequelize.STRING(100)
-    },
-    PRB_OUT: {
-        type: Sequelize.STRING(100)
-    },
     PRB_RTN: {
         type: Sequelize.INTEGER
     },
     PRB_XML: {
         type: Sequelize.STRING(1000),
         allowNull: false
+    }
+});
+
+const ATP = sequelize.define('ATP', {
+    ATP_PID: {
+        type: Sequelize.INTEGER.UNSIGNED,
+        primaryKey: true,
+        allowNull: false
+    },
+    ATP_TID: {
+        type: Sequelize.TINYINT(1).UNSIGNED,
+        primaryKey: true,
+        allowNull: false
+    },
+    ATP_IN: {
+        type: Sequelize.STRING(100)
+    },
+    ATP_OUT: {
+        type: Sequelize.STRING(500)
     }
 });
 
@@ -112,9 +143,30 @@ const USR_PRB = sequelize.define('USR_PRB', {
     UP_CRCT: {
         type: Sequelize.TINYINT(1)
     },
+    UP_PNT_TM: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
+    UP_PNT_LE: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
+    UP_PNT_RE: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
+    UP_PNT_ST: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
+    UP_PNT_ST: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
+    UP_PNT: {
+        type: Sequelize.INTEGER.UNSIGNED
+    },
     UP_DTM: {
         type: Sequelize.DATE(3),
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP(3)')
+    },
+    UP_XML: {
+        type: Sequelize.STRING(20000)
     }
 });
 
@@ -164,15 +216,76 @@ const LOG = sequelize.define('LOG', {
     }
 });
 
+app.post('/login', (req, res) => {
+    var id = req.body.ID;
+    var pw = req.body.PW;
+
+    USR.findAll({
+        where: {
+            USR_ID: id,
+            USR_PW: pw
+        }
+    })
+    .then(results =>
+        results && results.length && results.length > 0
+        ? 200
+        : 401
+    )
+    .then(result => {
+        console.log(result);
+        res.status(result).json("login");
+    })
+    .catch(err => {
+        console.error(err);
+    });
+});
+
+app.post('/mainPage', (req, res) => {
+    var id = req.body.ID;
+    
+    USR.findAll({
+        attributes: ['USR_NCK'],
+        where: {
+            USR_ID: id
+        }
+    })
+    .then(usrNck => {
+        GM.findAll({
+            attributes: ['GM_EXP'],
+            where: {
+                GM_ID: id
+            }
+        })
+        .then(results => {
+            var lv = 1;
+            var exp = results[0].dataValues.GM_EXP;
+            while(exp > lv * 100) {
+                exp -= lv * 100;
+                lv++;
+            }
+            results[0].dataValues.GM_LV = lv;
+            results[0].dataValues.GM_EXP = exp;
+            results[0].dataValues.USR_NCK = usrNck[0].dataValues.USR_NCK;
+            res.status(200).json(results);
+        })
+        .catch(err => {
+            console.error(err);
+        });
+    })
+    .catch(err => {
+        console.error(err);
+    });
+});
+
 // 난이도, 단원 선택 이후 문제 리스트 보기(return 문제 ID)
 // 현재 단원을 받는 대신에 단원을 반환해 주어야 함 -> 미구현된 프론트 부분을 대체하는 식
-// 또한 풀었는지 여부를 보내달라고 함                                                       // 구현해야함
-app.post('/problemList', (req, res) => {
+// 또한 풀었는지 여부를 보내달라고 함
+app.post('/getProblemList', (req, res) => {
     var diff = req.body.diff;
     // var cls = req.body.cls;
 
     PRB.findAll({
-        attributes: ['PRB_ID', 'PRB_CLS'],
+        attributes: ['PRB_ID', 'PRB_CLS', 'PRB_NM'],
         where: {
             PRB_DIFF: diff//,
             // PRB_CLS: cls
@@ -192,72 +305,85 @@ app.post('/problemList', (req, res) => {
     })
     .catch(err => {
         console.log(err);
-    })
+    });
 });
 
 // 문제 리스트에서 문제 선택했을 시 문제 정보 전달(return 문제 내용, 문제 힌트, 입력값, 출력값)
 // 문제에서 사용하는 XML도 보내기
-app.post('/problem', (req, res) => {
+app.post("/getProblem", (req, res) => {
     var uid = req.body.UID;
     var pid = req.body.PID;
 
-    USR_PRB.max('UP_SSEQ', {
+    USR_PRB.max("UP_SSEQ", {
         where: {
             UP_UID: uid,
             UP_PID: pid
         }
     })
-    .then(result =>
-        result
-        ? result
-        : 0
-    )
+    .then(result => (result ? result : 0))
     .then(seq => {
         USR_PRB.findAll({
-            attributes: ['UP_XML'],
+            attributes: ["UP_XML"],
             where: {
                 UP_UID: uid,
                 UP_PID: pid,
                 UP_SSEQ: seq
             }
         })
-        .then(result =>
-            result && result.length && result.length > 0
-            ? result
-            : null
+        .then(
+            result =>
+                result && result.length && result.length > 0 ? result : null
         )
         .then(xml => {
             PRB.findAll({
-                attributes: ['PRB_DIFF', 'PRB_CLS', 'PRB_CNT', 'PRB_HNT', 'PRB_IN', 'PRB_OUT', 'PRB_XML'],
+                attributes: [
+                    "PRB_DIFF",
+                    "PRB_CLS",
+                    "PRB_NM",
+                    "PRB_CNT",
+                    "PRB_HNT",
+                    "PRB_IN",
+                    "PRB_OUT",
+                    "PRB_XML"
+                ],
                 where: {
                     PRB_ID: pid
                 }
             })
-            .then(results =>
-                results && results.length && results.length > 0
-                ? results
-                : {
-                    PRB_CNT: "문제가 없습니다.",
-                    PRB_HNT: "문제가 없습니다.",
-                    PRB_IN: null,
-                    PRB_OUT: null,
-                    PRB_XML: null
-                }
+            .then(
+                results =>
+                    results && results.length && results.length > 0
+                        ? results
+                        : {
+                            PSB_DIFF: null,
+                            PSB_CLS: null,
+                            PRB_NM: "문제가 없습니다.",
+                            PRB_CNT: "문제가 없습니다.",
+                            PRB_HNT: "문제가 없습니다.",
+                            PRB_IN: null,
+                            PRB_OUT: null,
+                            PRB_XML: null
+                        }
             )
             .then(dataValues => {
-                if(xml === null) {
-                    dataValues.push({"UP_XML": null});
-                }
-                else {
-                    dataValues.push(xml[0]);
+                if (xml === null) {
+                    dataValues[0].dataValues.UP_XML = null;
+                } else {
+                    dataValues[0].dataValues.UP_XML = xml[0].UP_XML;
                 }
                 //console.log(dataValues);
                 res.status(200).json(dataValues);
             })
             .catch(err => {
                 console.log(err);
-            })
+            });
         })
+        .catch(err => {
+            console.log(err);
+        });
+    })
+    .catch(err => {
+        console.log(err);
     })
 });
 
@@ -266,8 +392,9 @@ app.post('/submit', (req, res) => {
     var uid = req.body.UID;
     var pid = req.body.PID;
     var crct = req.body.crct;
+    var xml = req.body.xml;
 
-    // SSEQ 가져와야 함
+    // 해당 유저가 특정 문제를 몇 번 째로 푸는 것인가?
     USR_PRB.max('UP_SSEQ', {
         where: {
             UP_UID: uid,
@@ -280,19 +407,246 @@ app.post('/submit', (req, res) => {
         : 0
     )
     .then(dataValue => {
+        // 몇 번 째로 푸는 지, 맞았는지, 제출한 xml은 무엇인지 추가
+        // 수정수정_USR_PRB의 바뀐 속성을 전부 변경
         USR_PRB.create({
             UP_UID: uid,
             UP_PID: pid,
             UP_SSEQ: dataValue + 1,
-            UP_CRCT: crct
+            UP_CRCT: crct,
+            UP_PNT_TM: 0,
+            UP_PNT_LE: 0,
+            UP_PNT_RE: 0,
+            UP_PNT_ST: 0,
+            UP_PNT_MU: 0,
+            UP_PNT: 0,
+            UP_XML: xml
         })
         .then(() => {
-            res.status(200).json("Submit Success");
+            // 문제를 맞았다면
+            if(crct === 1) {
+                // 푼 문제인가를 확인
+                USR_PRB.findAll({
+                    attributes: ['UP_CRCT'],
+                    where: {
+                        UP_UID: uid
+                    }
+                })
+                .then(results => {
+                    var ri;
+                    for (ri = 0; ri < results.length - 1; ri++) {
+                        if (results[ri].dataValues.UP_CRCT === 1) {
+                            break;
+                        }
+                    }
+
+                    // 추가 점수(100)에 대한 연산식(실행시간, 중간에 오래 멈춤, 패턴 반복, 한 번에 많은 행동, 블록의 길이)
+                    var points = {
+                        TIME: 0,
+                        STOP: 0,
+                        MUCH: 0,
+                        REPEAT: 0,
+                        LENGTH: 0
+                    };
+                    var addedPoint = 0;
+                    var time = req.body.time;
+                    var stop = req.body.stop;
+                    var much = req.body.much;
+
+                    if (time < 2000.0) {
+                        addedPoint += 30;
+                        points.TIME += 30;
+                    }
+                    if (stop === 0) {
+                        addedPoint += 20;
+                        points.STOP += 20;
+                    }
+                    if (much === 0) {
+                        addedPoint += 15;
+                        points.MUCH += 15;
+                    }
+                    if (xml.length < 10000) {
+                        addedPoint += 15;
+                        points.LENGTH += 15;
+                    }
+
+                    // 제출한 문제의 시도 횟수 확인
+                    LOG.max('LOG_SEQ', {
+                        where: {
+                            LOG_UID: uid,
+                            LOG_PID: pid,
+                            LOG_SSEQ: dataValue + 1
+                        }
+                    })
+                    .then(targetSeq => {
+                        // 제출한 문제의 최종 블록 형태를 가져옴
+                        LOG.findAll({
+                            attributes: ['LOG_BVL'],
+                            where: {
+                                LOG_UID: uid,
+                                LOG_PID: pid,
+                                LOG_SEQ: targetSeq,
+                                LOG_SSEQ: dataValue + 1
+                            }
+                        })
+                        .then(logValues => {
+                            // 3줄 이상의 반복 패턴이 있는지 확인
+                            var len = logValues.length;
+                            var i, j;
+                            var repeat = 0;
+
+                            for (i = 0; i < len - 2; i++) {
+                                for (j = i + 1; j < i + 3; j++) {
+                                    if (JSON.stringify(logValues[j]) != JSON.stringify(logValues[i])) {
+                                        break;
+                                    }
+                                }
+                                if (j === i + 3) {
+                                    repeat = 1;
+                                    break;
+                                }
+                            }
+
+                            if (repeat === 0) {
+                                addedPoint += 20;
+                                points.REPEAT += 20;
+                            }
+
+                            // 제출한 문제의 추가 점수 정보 저장
+                            // 수정수정_처음 맞은 문제일 때 각 속성의 값을 변경_여기 고쳐야 함
+                            USR_PRB.update({
+                                UP_PNT: addedPoint
+                            }, {
+                                where: {
+                                    UP_UID: uid,
+                                    UP_PID: pid,
+                                    UP_SSEQ: dataValue + 1
+                                }
+                            })
+                            .then(() => {
+                                // 처음 맞은 문제라면
+                                if (ri === results.length - 1) {
+                                    // 사용자의 경험치를 가져옴
+                                    GM.findAll({
+                                        attributes: ['GM_EXP'],
+                                        where: {
+                                            GM_ID: uid
+                                        }
+                                    })
+                                    .then(experience => {
+                                        // 문제의 점수를 가져옴
+                                        PRB.findAll({
+                                            attributes: ['PRB_RTN'],
+                                            where: {
+                                                PRB_ID: pid
+                                            }
+                                        })
+                                        .then(rating => {
+                                            // 사용자의 경험치에 문제의 점수와 추가 점수를 추가
+                                            // 수정수정_새로운 속성의 정보를 각각 초기화 해주어야 함
+                                            GM.update({
+                                                GM_EXP: experience[0].dataValues.GM_EXP + rating[0].dataValues.PRB_RTN + addedPoint
+                                            }, {
+                                                where: {
+                                                    GM_ID: uid
+                                                }
+                                            })
+                                            .then(() => {
+                                                res.status(200).json(points);
+                                            })
+                                            .catch(err => {
+                                                console.error(err);
+                                            });
+                                        })
+                                        .catch(err => {
+                                            console.error(err);
+                                        });
+                                    })
+                                    .catch(err => {
+                                        console.error(err);
+                                    });
+                                }
+                                // 이미 맞은 문제라면
+                                else {
+                                    // 지금까지 가장 높았던 추가 점수를 가져옴
+                                    USR_PRB.max('UP_PNT', {
+                                        where: {
+                                            UP_UID: uid,
+                                            UP_PID: pid,
+                                            UP_SSEQ: {
+                                                [Sequelize.Op.lt]: dataValue + 1
+                                            },
+                                            UP_CRCT: 1
+                                        }
+                                    })
+                                    .then(maxAddedPoint => {
+                                        // 제출한 추가점수가 현재까지 푼 추가점수보다 높다면
+                                        if (addedPoint > maxAddedPoint) {
+                                            // 사용자의 경험치를 가져옴
+                                            GM.findAll({
+                                                attributes: ['GM_EXP'],
+                                                where: {
+                                                    GM_ID: uid
+                                                }
+                                            })
+                                            .then(experience => {
+                                                // 사용자 경험치를 갱신
+                                                // 수정수정_모든 추가 점수에 대한 데이터를 수정해야 함
+                                                GM.update({
+                                                    GM_EXP: experience[0].dataValues.GM_EXP + addedPoint - maxAddedPoint
+                                                }, {
+                                                    where: {
+                                                        GM_ID: uid
+                                                    }
+                                                })
+                                                .then(() => {
+                                                    res.status(200).json(points);
+                                                })
+                                                .catch(err => {
+                                                    console.error(err);
+                                                });
+                                            })
+                                            .catch(err => {
+                                                console.error(err);
+                                            });
+                                        }
+                                        else {
+                                            res.status(200).json(points);
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error(err);
+                                    });
+                                }
+                            })
+                            .catch(err => {
+                                console.error(err);
+                            });
+                        })
+                        .catch(err => {
+                            console.error(err);
+                        })
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+            }
+            // 문제를 틀렸다면
+            else {
+                res.status(200).json("Incorrect");
+            }
         })
         .catch(err => {
             console.error(err);
-        })
+        });
     })
+    .catch(err => {
+        console.error(err);
+    });
 });
 
 app.post("/log", (req, res) => {
@@ -403,6 +757,7 @@ app.post("/log", (req, res) => {
     // .catch(err => {
     //     console.log(err);
     // })
+
     USR_PRB.max('UP_SSEQ', {
         where: {
             UP_UID: req.body.UID,
@@ -434,12 +789,12 @@ app.post("/log", (req, res) => {
             })
             .catch(err => {
                 console.error(err);
-            })
+            });
         })
     })
     .catch(err => {
         console.err(err);
-    })
+    });
     // .then(result => {
     //     if(!result)
     //         console.log("?!?!?");
@@ -478,6 +833,67 @@ app.post("/log", (req, res) => {
     //         console.error(err);
     //     })
     // })
+});
+
+app.post('/test', (req, res) => {
+    var interval = setInterval(function() {
+        console.log("test...");
+    }, 1000);
+
+    res.status(200).json("timer test");
+});
+
+app.post('/repeat', (req, res) => {
+    var uid = req.body.UID;
+    var pid = req.body.PID;
+
+    LOG.max('LOG_SSEQ', {
+        where: {
+            LOG_UID: uid,
+            LOG_PID: pid
+        }
+    })
+    .then(result =>
+        result
+        ? result
+        : 0
+    )
+    .then(sseq => {
+        LOG.findAll({
+            attributes: ["LOG_BVL"],
+            where: {
+                LOG_UID: uid,
+                LOG_pid: pid,
+                LOG_SSEQ: 4 // sseq를 넣어야 함, 테스트로 literal을 넣어둠
+            }
+        })
+        .then(results => {
+            var len = results.length;
+            var i, j;
+            var count = 0;
+
+            for (i = 0; i < len - 3; i++) {
+                for (j = i + 1; j< i + 3; j++) {
+                    if (JSON.stringify(results[j]) != JSON.stringify(results[i])) {
+                        break;
+                    }
+                }
+                if (j == i + 3) {
+                    count++;
+                }
+            }
+
+            console.log(count);
+
+            res.status(200).json(results);
+        })
+        .catch(err => {
+            console.error(err);
+        });
+    })
+    .catch(err => {
+        console.error(err);
+    })
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

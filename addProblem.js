@@ -9,19 +9,19 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
     '</value>' +
   '</block>' +
   */
-  '<block type="control_repeat" id="control_repeat">' +
-    '<value name="TIMES">' +
-      '<shadow type="math_whole_number">' +
-        '<field name="NUM">10</field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
-  '<block type="control_forever" id="control_forever"></block>' +
-//   '<block type="control_if" id="control_if"></block>' +
+//   '<block type="control_repeat" id="control_repeat">' +
+//     '<value name="TIMES">' +
+//       '<shadow type="math_whole_number">' +
+//         '<field name="NUM">10</field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
+//   '<block type="control_forever" id="control_forever"></block>' +
+  '<block type="control_if" id="control_if"></block>' +
 //   '<block type="control_if_else" id="control_if_else"></block>' +
   /*'<block type="control_wait_until" id="control_wait_until"></block>' +*/
-  '<block type="control_repeat_until" id="control_repeat_until"></block>' +
-  '<block type="control_stop" id="control_stop"></block>' +
+//   '<block type="control_repeat_until" id="control_repeat_until"></block>' +
+//   '<block type="control_stop" id="control_stop"></block>' +
 '</category>' +
 '<category name="Texts" id="texts_extensions" colour="#00316B" secondaryColour="#001B35">' +
   /*
@@ -37,13 +37,13 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
     '<value name="TEXT">' +
     '</value>' +
   '</block>' +
-  '<block type="texts_println" id="texts_println">' +
-    '<value name="TEXT">' +
-      '<shadow type="text">' +
-        '<field name="TEXT">hello, world!</field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
+//   '<block type="texts_println" id="texts_println">' +
+//     '<value name="TEXT">' +
+//       '<shadow type="text">' +
+//         '<field name="TEXT">hello, world!</field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
   '<block type="texts_print" id="texts_print">' +
     '<value name="TEXT">' +
       '<shadow type="text">' +
@@ -64,54 +64,54 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
 //   '</block>' +
 //   '<block type="operator_false" id="operator_false">' +
 //   '</block>' +
-  '<block type="operator_add" id="operator_add">' +
-    '<value name="NUM1">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="NUM2">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
-  '<block type="operator_subtract" id="operator_subtract">' +
-    '<value name="NUM1">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="NUM2">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
-  '<block type="operator_multiply" id="operator_multiply">' +
-    '<value name="NUM1">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="NUM2">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
-  '<block type="operator_divide" id="operator_divide">' +
-    '<value name="NUM1">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="NUM2">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
+//   '<block type="operator_add" id="operator_add">' +
+//     '<value name="NUM1">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="NUM2">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
+//   '<block type="operator_subtract" id="operator_subtract">' +
+//     '<value name="NUM1">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="NUM2">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
+//   '<block type="operator_multiply" id="operator_multiply">' +
+//     '<value name="NUM1">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="NUM2">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
+//   '<block type="operator_divide" id="operator_divide">' +
+//     '<value name="NUM1">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="NUM2">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
   '<block type="operator_lt" id="operator_lt">' +
     '<value name="OPERAND1">' +
       '<shadow type="text">' +
@@ -169,18 +169,18 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
 //       '</shadow>' +
 //     '</value>' +
 //   '</block>' +
-//   '<block type="operator_mod" id="operator_mod">' +
-//     '<value name="NUM1">' +
-//       '<shadow type="math_number">' +
-//         '<field name="NUM"></field>' +
-//       '</shadow>' +
-//     '</value>' +
-//     '<value name="NUM2">' +
-//       '<shadow type="math_number">' +
-//         '<field name="NUM"></field>' +
-//       '</shadow>' +
-//     '</value>' +
-//   '</block>' +
+  '<block type="operator_mod" id="operator_mod">' +
+    '<value name="NUM1">' +
+      '<shadow type="math_number">' +
+        '<field name="NUM"></field>' +
+      '</shadow>' +
+    '</value>' +
+    '<value name="NUM2">' +
+      '<shadow type="math_number">' +
+        '<field name="NUM"></field>' +
+      '</shadow>' +
+    '</value>' +
+  '</block>' +
 //   '<block type="operator_round" id="operator_round">' +
 //     '<value name="NUM">' +
 //       '<shadow type="math_number">' +
