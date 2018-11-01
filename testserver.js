@@ -928,6 +928,11 @@ app.post("/feedback", (req, res) => {
             });
         }
         recursive.then(() => {
+            points._TIME = len * 30;
+            points._LENGTH = len * 15;
+            points._REPEAT = len * 20;
+            points._STOP = len * 20;
+            points._MUCH = len * 15;
             res.status(200).json(points);
         });
     })
