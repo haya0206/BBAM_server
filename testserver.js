@@ -2,7 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const Sequelize = require("sequelize");
 
-
+const sequelize = new Sequelize("BBAM", "root", "bbam", {
+  host: "54.180.2.31",
+  dialect: "mysql",
+  define: {
+    freezeTableName: true,
+    timestamps: false
+  }
+});
 sequelize.authenticate().then(() => {
     console.log('Connection has been established successfully.');
 }).catch(err => {
@@ -852,7 +859,6 @@ app.post("/feedback", (req, res) => {
     var id = req.body.ID;
     
     USR_PRB.findAll({
-        attributes: ['UP_PID'],
         where: {
             UP_UID: id
         }
@@ -868,149 +874,189 @@ app.post("/feedback", (req, res) => {
             if(prbs.indexOf(prbss[i].dataValues.UP_PID) === -1) {
                 prbs.push(prbss[i].dataValues.UP_PID);
             }
-            if(i === lens - 1) {
-                var len = prbs.length;
-                var points = {
-                    TIME: 0,
-                    LENGTH: 0,
-                    REPEAT: 0,
-                    STOP: 0,
-                    MUCH: 0
-                };
-
-                // let getMax = (index) => new Promise((resolve) => {
-                //     USR_PRB.max('UP_PNT', {
-                //         where: {
-                //             UP_UID: id,
-                //             UP_PID: prbs[index]
-                //         }
-                //     })
-                //     .then(maxPnt => {
-                //         resolve(maxPnt);
-                //     })
-                //     .catch(err => {
-                //         console.error(err);
-                //     })
-                // });
-
-                // let addPnt = (index) => new Promise((resolve) => {
-                //     USR_PRB.findAll({
-                //         attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-                //         where: {
-                //             UP_UID: id,
-                //             UP_PID: prbs[index],
-                //             UP_PNT: maxPnt
-                //         }
-                //     })
-                //     .then(pnts => {
-                //         points.TIME += pnts[0].dataValues.UP_PNT_TM;
-                //         points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-                //         points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-                //         points.STOP += pnts[0].dataValues.UP_PNT_ST;
-                //         points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-
-                //         resolve();
-                //     })
-                //     .catch(err => {
-                //         console.error(err);
-                //     });
-                // }
-
-                // async function addPoints(index) {
-                //     await getMax(index);
-                //     await addPnt(index);
-                // };
-
-                // getMax = (index) => {
-                //     return new Promise((resolve, reject) => {
-                //         USR_PRB.max('UP_PNT', {
-                //             where: {
-                //                 UP_UID: id,
-                //                 UP_PID: prbs[index]
-                //             }
-                //         })
-                //         .then(maxPnt => {
-                //             resolve(maxPnt);
-                //         })
-                //         .catch(err => {
-                //             console.error(err);
-                //         });
-                //     });
-                // };
-
-                // addPnt = (index, pnt) => {
-                //     return new Promise((resolve, reject) => {
-                //         USR_PRB.findAll({
-                //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-                //             where: {
-                //                 UP_UID: id,
-                //                 UP_PID: prbs[index],
-                //                 UP_PNT: pnt
-                //             }
-                //         })
-                //         .then(pnts => {
-                //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
-                //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-                //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-                //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
-                //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-    
-                //             resolve();
-                //         })
-                //         .catch(err => {
-                //             console.error(err);
-                //         });
-                //     });
-                // };
-
-                for(var j = 0; j < len; j++) {
-                    // getMax(j)
-                    // .then(maxPnt => {
-                    //     addPnt(j, maxPnt);
-                    // })
-                    // .catch(err => {
-                    //     console.error(err);
-                    // });
-
-                    USR_PRB.max('UP_PNT', {
-                        where: {
-                            UP_UID: id,
-                            UP_PID: prbs[j]
-                        }
-                    })
-                    .then(maxPnt => {
-                        USR_PRB.findAll({
-                            attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-                            where: {
-                                UP_UID: id,
-                                UP_PID: prbs[j],
-                                UP_PNT: maxPnt
-                            }
-                        })
-                        .then(pnts => {
-                            points.TIME += pnts[0].dataValues.UP_PNT_TM;
-                            points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-                            points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-                            points.STOP += pnts[0].dataValues.UP_PNT_ST;
-                            points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-    
-                            console.log(j + " /// " + pnts);
-                            if(j === len - 1) {
-                                res.status(200).json(points);
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                        });
-                    })
-                    .catch(err => {
-                        console.error(err);
-                    });
-                }
-
-                //res.status(200).json(points);
-            }
         }
+
+        var len = prbs.length;
+        var points = {
+            TIME: 0,
+            LENGTH: 0,
+            REPEAT: 0,
+            STOP: 0,
+            MUCH: 0
+        };
+
+        // 현재 prbss는 USR_PRB의 데이터를 다 가지고 있다. 따라서 다시 불러올 필요가 없음! 데이터 내에서 검색만 하면 됨
+        // 어떻게 검색할 것인가...?
+        for(var i = 0; i < len; i++) {
+            USR_PRB.max('UP_PNT', {
+                where: {
+                    UP_UID: id,
+                    UP_PID: prbs[j]
+                }
+            })
+            .then(maxPnt => {
+                // USR_PRB.findAll({
+                //     attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+                //     where: {
+                //         UP_UID: id,
+                //         UP_PID: prbs[j],
+                //         UP_PNT: maxPnt
+                //     }
+                // })
+                // .then(pnts => {
+                //     points.TIME += pnts[0].dataValues.UP_PNT_TM;
+                //     points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+                //     points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+                //     points.STOP += pnts[0].dataValues.UP_PNT_ST;
+                //     points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+
+                //     console.log(j + " /// " + pnts);
+                //     if(j === len - 1) {
+                //         res.status(200).json(points);
+                //     }
+                // })
+                // .catch(err => {
+                //     console.error(err);
+                // });
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        }
+
+        // res.status(200).json(prbs);
+
+        // let getMax = (index) => new Promise((resolve) => {
+        //     USR_PRB.max('UP_PNT', {
+        //         where: {
+        //             UP_UID: id,
+        //             UP_PID: prbs[index]
+        //         }
+        //     })
+        //     .then(maxPnt => {
+        //         resolve(maxPnt);
+        //     })
+        //     .catch(err => {
+        //         console.error(err);
+        //     })
+        // });
+
+        // let addPnt = (index) => new Promise((resolve) => {
+        //     USR_PRB.findAll({
+        //         attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+        //         where: {
+        //             UP_UID: id,
+        //             UP_PID: prbs[index],
+        //             UP_PNT: maxPnt
+        //         }
+        //     })
+        //     .then(pnts => {
+        //         points.TIME += pnts[0].dataValues.UP_PNT_TM;
+        //         points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+        //         points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+        //         points.STOP += pnts[0].dataValues.UP_PNT_ST;
+        //         points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+
+        //         resolve();
+        //     })
+        //     .catch(err => {
+        //         console.error(err);
+        //     });
+        // }
+
+        // async function addPoints(index) {
+        //     await getMax(index);
+        //     await addPnt(index);
+        // };
+
+        // getMax = (index) => {
+        //     return new Promise((resolve, reject) => {
+        //         USR_PRB.max('UP_PNT', {
+        //             where: {
+        //                 UP_UID: id,
+        //                 UP_PID: prbs[index]
+        //             }
+        //         })
+        //         .then(maxPnt => {
+        //             resolve(maxPnt);
+        //         })
+        //         .catch(err => {
+        //             console.error(err);
+        //         });
+        //     });
+        // };
+
+        // addPnt = (index, pnt) => {
+        //     return new Promise((resolve, reject) => {
+        //         USR_PRB.findAll({
+        //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+        //             where: {
+        //                 UP_UID: id,
+        //                 UP_PID: prbs[index],
+        //                 UP_PNT: pnt
+        //             }
+        //         })
+        //         .then(pnts => {
+        //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
+        //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+        //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+        //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
+        //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+
+        //             resolve();
+        //         })
+        //         .catch(err => {
+        //             console.error(err);
+        //         });
+        //     });
+        // };
+
+        // for(var j = 0; j < len; j++) {
+        //     // getMax(j)
+        //     // .then(maxPnt => {
+        //     //     addPnt(j, maxPnt);
+        //     // })
+        //     // .catch(err => {
+        //     //     console.error(err);
+        //     // });
+
+        //     USR_PRB.max('UP_PNT', {
+        //         where: {
+        //             UP_UID: id,
+        //             UP_PID: prbs[j]
+        //         }
+        //     })
+        //     .then(maxPnt => {
+        //         USR_PRB.findAll({
+        //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+        //             where: {
+        //                 UP_UID: id,
+        //                 UP_PID: prbs[j],
+        //                 UP_PNT: maxPnt
+        //             }
+        //         })
+        //         .then(pnts => {
+        //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
+        //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+        //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+        //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
+        //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+
+        //             console.log(j + " /// " + pnts);
+        //             if(j === len - 1) {
+        //                 res.status(200).json(points);
+        //             }
+        //         })
+        //         .catch(err => {
+        //             console.error(err);
+        //         });
+        //     })
+        //     .catch(err => {
+        //         console.error(err);
+        //     });
+        // }
+
+        // //res.status(200).json(points);
     })
     .catch(err => {
         console.err(err);
