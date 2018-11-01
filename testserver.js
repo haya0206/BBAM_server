@@ -1,19 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const Sequelize = require('sequelize');
-const sequelize = new Sequelize(
-    '',
-    '',
-    '',
-    {
-        'host': '',
-        'dialect': 'mysql',
-        define: {
-            freezeTableName: true,
-            timestamps: false
-        }
-    }
-);
+const Sequelize = require("sequelize");
+
+
 sequelize.authenticate().then(() => {
     console.log('Connection has been established successfully.');
 }).catch(err => {
@@ -155,7 +144,7 @@ const USR_PRB = sequelize.define('USR_PRB', {
     UP_PNT_ST: {
         type: Sequelize.INTEGER.UNSIGNED
     },
-    UP_PNT_ST: {
+    UP_PNT_MU: {
         type: Sequelize.INTEGER.UNSIGNED
     },
     UP_PNT: {
@@ -300,7 +289,7 @@ app.post('/getProblemList', (req, res) => {
         }
     )
     .then(dataValues => {
-        console.log(dataValues);
+        // console.log(dataValues);
         res.status(200).json(dataValues);
     })
     .catch(err => {
@@ -335,6 +324,7 @@ app.post("/getProblem", (req, res) => {
                 result && result.length && result.length > 0 ? result : null
         )
         .then(xml => {
+            // 현재 입력과 출력값을 넘기지 않음, ATP Entity에서 넘겨받아야 함
             PRB.findAll({
                 attributes: [
                     "PRB_DIFF",
@@ -342,8 +332,6 @@ app.post("/getProblem", (req, res) => {
                     "PRB_NM",
                     "PRB_CNT",
                     "PRB_HNT",
-                    "PRB_IN",
-                    "PRB_OUT",
                     "PRB_XML"
                 ],
                 where: {
@@ -355,9 +343,9 @@ app.post("/getProblem", (req, res) => {
                     results && results.length && results.length > 0
                         ? results
                         : {
-                            PSB_DIFF: null,
-                            PSB_CLS: null,
-                            PRB_NM: "문제가 없습니다.",
+                            PRB_DIFF: null,
+                            PRB_CLS: null,
+                            PRB_NM: "문제 없음",
                             PRB_CNT: "문제가 없습니다.",
                             PRB_HNT: "문제가 없습니다.",
                             PRB_IN: null,
@@ -371,8 +359,28 @@ app.post("/getProblem", (req, res) => {
                 } else {
                     dataValues[0].dataValues.UP_XML = xml[0].UP_XML;
                 }
-                //console.log(dataValues);
-                res.status(200).json(dataValues);
+
+                ATP.findAll({
+                    attributes: ["ATP_IN", "ATP_OUT"],
+                    where: {
+                        ATP_PID: pid
+                    }
+                })
+                .then(inout => {
+                    var len = inout.length;
+
+                    for(var i = 0; i < len; i++) {
+                        dataValues[0].dataValues.PRB_IN = inout[i].ATP_IN;
+                        dataValues[0].dataValues.PRB_OUT = inout[i].ATP_OUT;
+
+                        if(i === len - 1) {
+                            res.status(200).json(dataValues);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                });
             })
             .catch(err => {
                 console.log(err);
@@ -429,7 +437,8 @@ app.post('/submit', (req, res) => {
                 USR_PRB.findAll({
                     attributes: ['UP_CRCT'],
                     where: {
-                        UP_UID: uid
+                        UP_UID: uid,
+                        UP_PID: pid
                     }
                 })
                 .then(results => {
@@ -443,19 +452,23 @@ app.post('/submit', (req, res) => {
                     // 추가 점수(100)에 대한 연산식(실행시간, 중간에 오래 멈춤, 패턴 반복, 한 번에 많은 행동, 블록의 길이)
                     var points = {
                         TIME: 0,
-                        STOP: 0,
-                        MUCH: 0,
+                        LENGTH: 0,
                         REPEAT: 0,
-                        LENGTH: 0
+                        STOP: 0,
+                        MUCH: 0
                     };
                     var addedPoint = 0;
                     var time = req.body.time;
                     var stop = req.body.stop;
                     var much = req.body.much;
 
-                    if (time < 2000.0) {
+                    if (time < 1000.0) {
                         addedPoint += 30;
                         points.TIME += 30;
+                    }
+                    if (xml.length < 10000) {
+                        addedPoint += 15;
+                        points.LENGTH += 15;
                     }
                     if (stop === 0) {
                         addedPoint += 20;
@@ -464,10 +477,6 @@ app.post('/submit', (req, res) => {
                     if (much === 0) {
                         addedPoint += 15;
                         points.MUCH += 15;
-                    }
-                    if (xml.length < 10000) {
-                        addedPoint += 15;
-                        points.LENGTH += 15;
                     }
 
                     // 제출한 문제의 시도 횟수 확인
@@ -513,8 +522,13 @@ app.post('/submit', (req, res) => {
                             }
 
                             // 제출한 문제의 추가 점수 정보 저장
-                            // 수정수정_처음 맞은 문제일 때 각 속성의 값을 변경_여기 고쳐야 함
+                            // 수정수정_처음 맞은 문제일 때 각 속성의 값을 변경
                             USR_PRB.update({
+                                UP_PNT_TM: points.TIME,
+                                UP_PNT_LE: points.LENGTH,
+                                UP_PNT_RE: points.REPEAT,
+                                UP_PNT_ST: points.STOP,
+                                UP_PNT_MU: points.MUCH,
                                 UP_PNT: addedPoint
                             }, {
                                 where: {
@@ -543,7 +557,6 @@ app.post('/submit', (req, res) => {
                                         })
                                         .then(rating => {
                                             // 사용자의 경험치에 문제의 점수와 추가 점수를 추가
-                                            // 수정수정_새로운 속성의 정보를 각각 초기화 해주어야 함
                                             GM.update({
                                                 GM_EXP: experience[0].dataValues.GM_EXP + rating[0].dataValues.PRB_RTN + addedPoint
                                             }, {
@@ -835,65 +848,234 @@ app.post("/log", (req, res) => {
     // })
 });
 
-app.post('/test', (req, res) => {
-    var interval = setInterval(function() {
-        console.log("test...");
-    }, 1000);
-
-    res.status(200).json("timer test");
-});
-
-app.post('/repeat', (req, res) => {
-    var uid = req.body.UID;
-    var pid = req.body.PID;
-
-    LOG.max('LOG_SSEQ', {
+app.post("/feedback", (req, res) => {
+    var id = req.body.ID;
+    
+    USR_PRB.findAll({
+        attributes: ['UP_PID'],
         where: {
-            LOG_UID: uid,
-            LOG_PID: pid
+            UP_UID: id
         }
     })
-    .then(result =>
-        result
-        ? result
-        : 0
-    )
-    .then(sseq => {
-        LOG.findAll({
-            attributes: ["LOG_BVL"],
-            where: {
-                LOG_UID: uid,
-                LOG_pid: pid,
-                LOG_SSEQ: 4 // sseq를 넣어야 함, 테스트로 literal을 넣어둠
+    .then(prbss => {
+        // res.status(200).json(prbss);
+        var prbs = new Array();
+        var lens = prbss.length;
+
+        // for문 안에 for문 구조 변경
+        // 먼저 정보를 전부 들고온 뒤에 해당 정보를 가공하여 반환
+        for(var i = 0; i < lens; i++) {
+            if(prbs.indexOf(prbss[i].dataValues.UP_PID) === -1) {
+                prbs.push(prbss[i].dataValues.UP_PID);
             }
-        })
-        .then(results => {
-            var len = results.length;
-            var i, j;
-            var count = 0;
+            if(i === lens - 1) {
+                var len = prbs.length;
+                var points = {
+                    TIME: 0,
+                    LENGTH: 0,
+                    REPEAT: 0,
+                    STOP: 0,
+                    MUCH: 0
+                };
 
-            for (i = 0; i < len - 3; i++) {
-                for (j = i + 1; j< i + 3; j++) {
-                    if (JSON.stringify(results[j]) != JSON.stringify(results[i])) {
-                        break;
-                    }
+                // let getMax = (index) => new Promise((resolve) => {
+                //     USR_PRB.max('UP_PNT', {
+                //         where: {
+                //             UP_UID: id,
+                //             UP_PID: prbs[index]
+                //         }
+                //     })
+                //     .then(maxPnt => {
+                //         resolve(maxPnt);
+                //     })
+                //     .catch(err => {
+                //         console.error(err);
+                //     })
+                // });
+
+                // let addPnt = (index) => new Promise((resolve) => {
+                //     USR_PRB.findAll({
+                //         attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+                //         where: {
+                //             UP_UID: id,
+                //             UP_PID: prbs[index],
+                //             UP_PNT: maxPnt
+                //         }
+                //     })
+                //     .then(pnts => {
+                //         points.TIME += pnts[0].dataValues.UP_PNT_TM;
+                //         points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+                //         points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+                //         points.STOP += pnts[0].dataValues.UP_PNT_ST;
+                //         points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+
+                //         resolve();
+                //     })
+                //     .catch(err => {
+                //         console.error(err);
+                //     });
+                // }
+
+                // async function addPoints(index) {
+                //     await getMax(index);
+                //     await addPnt(index);
+                // };
+
+                // getMax = (index) => {
+                //     return new Promise((resolve, reject) => {
+                //         USR_PRB.max('UP_PNT', {
+                //             where: {
+                //                 UP_UID: id,
+                //                 UP_PID: prbs[index]
+                //             }
+                //         })
+                //         .then(maxPnt => {
+                //             resolve(maxPnt);
+                //         })
+                //         .catch(err => {
+                //             console.error(err);
+                //         });
+                //     });
+                // };
+
+                // addPnt = (index, pnt) => {
+                //     return new Promise((resolve, reject) => {
+                //         USR_PRB.findAll({
+                //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+                //             where: {
+                //                 UP_UID: id,
+                //                 UP_PID: prbs[index],
+                //                 UP_PNT: pnt
+                //             }
+                //         })
+                //         .then(pnts => {
+                //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
+                //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+                //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+                //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
+                //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+    
+                //             resolve();
+                //         })
+                //         .catch(err => {
+                //             console.error(err);
+                //         });
+                //     });
+                // };
+
+                for(var j = 0; j < len; j++) {
+                    // getMax(j)
+                    // .then(maxPnt => {
+                    //     addPnt(j, maxPnt);
+                    // })
+                    // .catch(err => {
+                    //     console.error(err);
+                    // });
+
+                    USR_PRB.max('UP_PNT', {
+                        where: {
+                            UP_UID: id,
+                            UP_PID: prbs[j]
+                        }
+                    })
+                    .then(maxPnt => {
+                        USR_PRB.findAll({
+                            attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+                            where: {
+                                UP_UID: id,
+                                UP_PID: prbs[j],
+                                UP_PNT: maxPnt
+                            }
+                        })
+                        .then(pnts => {
+                            points.TIME += pnts[0].dataValues.UP_PNT_TM;
+                            points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+                            points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+                            points.STOP += pnts[0].dataValues.UP_PNT_ST;
+                            points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+    
+                            console.log(j + " /// " + pnts);
+                            if(j === len - 1) {
+                                res.status(200).json(points);
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                        });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    });
                 }
-                if (j == i + 3) {
-                    count++;
-                }
+
+                //res.status(200).json(points);
             }
-
-            console.log(count);
-
-            res.status(200).json(results);
-        })
-        .catch(err => {
-            console.error(err);
-        });
+        }
     })
     .catch(err => {
-        console.error(err);
-    })
+        console.err(err);
+    });
 });
+
+// app.post('/test', (req, res) => {
+//     var interval = setInterval(function() {
+//         console.log("test...");
+//     }, 1000);
+
+//     res.status(200).json("timer test");
+// });
+
+// app.post('/repeat', (req, res) => {
+//     var uid = req.body.UID;
+//     var pid = req.body.PID;
+
+//     LOG.max('LOG_SSEQ', {
+//         where: {
+//             LOG_UID: uid,
+//             LOG_PID: pid
+//         }
+//     })
+//     .then(result =>
+//         result
+//         ? result
+//         : 0
+//     )
+//     .then(sseq => {
+//         LOG.findAll({
+//             attributes: ["LOG_BVL"],
+//             where: {
+//                 LOG_UID: uid,
+//                 LOG_pid: pid,
+//                 LOG_SSEQ: 4 // sseq를 넣어야 함, 테스트로 literal을 넣어둠
+//             }
+//         })
+//         .then(results => {
+//             var len = results.length;
+//             var i, j;
+//             var count = 0;
+
+//             for (i = 0; i < len - 3; i++) {
+//                 for (j = i + 1; j< i + 3; j++) {
+//                     if (JSON.stringify(results[j]) != JSON.stringify(results[i])) {
+//                         break;
+//                     }
+//                 }
+//                 if (j == i + 3) {
+//                     count++;
+//                 }
+//             }
+
+//             console.log(count);
+
+//             res.status(200).json(results);
+//         })
+//         .catch(err => {
+//             console.error(err);
+//         });
+//     })
+//     .catch(err => {
+//         console.error(err);
+//     })
+// });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
