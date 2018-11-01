@@ -2,14 +2,22 @@ const express = require("express");
 const cors = require("cors");
 const Sequelize = require("sequelize");
 
-const sequelize = new Sequelize("BBAM", "root", "bbam", {
-  host: "54.180.2.31",
-  dialect: "mysql",
-  define: {
-    freezeTableName: true,
-    timestamps: false
-  }
-});
+// Load the full build.
+var _ = require('lodash');
+// Load the core build.
+// var _ = require('lodash/core');
+// Load the FP build for immutable auto-curried iteratee-first data-last methods.
+var fp = require('lodash/fp');
+ 
+// Load method categories.
+var array = require('lodash/array');
+var object = require('lodash/fp/object');
+ 
+// Cherry-pick methods for smaller browserify/rollup/webpack bundles.
+var at = require('lodash/at');
+var curryN = require('lodash/fp/curryN');
+
+
 sequelize.authenticate().then(() => {
     console.log('Connection has been established successfully.');
 }).catch(err => {
@@ -864,7 +872,6 @@ app.post("/feedback", (req, res) => {
         }
     })
     .then(prbss => {
-        // res.status(200).json(prbss);
         var prbs = new Array();
         var lens = prbss.length;
 
@@ -876,7 +883,11 @@ app.post("/feedback", (req, res) => {
             }
         }
 
+        return prbs;
+    })
+    .then(prbs => {
         var len = prbs.length;
+        var recursive = Promise.resolve(0);
         var points = {
             TIME: 0,
             LENGTH: 0,
@@ -885,243 +896,44 @@ app.post("/feedback", (req, res) => {
             MUCH: 0
         };
 
-        // 현재 prbss는 USR_PRB의 데이터를 다 가지고 있다. 따라서 다시 불러올 필요가 없음! 데이터 내에서 검색만 하면 됨
-        // 어떻게 검색할 것인가...?
         for(var i = 0; i < len; i++) {
-            USR_PRB.max('UP_PNT', {
-                where: {
-                    UP_UID: id,
-                    UP_PID: prbs[j]
-                }
-            })
-            .then(maxPnt => {
-                // USR_PRB.findAll({
-                //     attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-                //     where: {
-                //         UP_UID: id,
-                //         UP_PID: prbs[j],
-                //         UP_PNT: maxPnt
-                //     }
-                // })
-                // .then(pnts => {
-                //     points.TIME += pnts[0].dataValues.UP_PNT_TM;
-                //     points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-                //     points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-                //     points.STOP += pnts[0].dataValues.UP_PNT_ST;
-                //     points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-
-                //     console.log(j + " /// " + pnts);
-                //     if(j === len - 1) {
-                //         res.status(200).json(points);
-                //     }
-                // })
-                // .catch(err => {
-                //     console.error(err);
-                // });
-            })
-            .catch(err => {
-                console.error(err);
+            recursive = recursive.then(index => {
+                return USR_PRB.max('UP_PNT', {
+                    where: {
+                        UP_UID: id,
+                        UP_PID: prbs[index]
+                    }
+                })
+                .then(maxPnt => {
+                    return USR_PRB.findAll({
+                        attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
+                        where: {
+                            UP_UID: id,
+                            UP_PID: prbs[index],
+                            UP_PNT: maxPnt
+                        }
+                    })
+                })
+                .then(pnts => {
+                    points.TIME += pnts[0].dataValues.UP_PNT_TM;
+                    points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+                    points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+                    points.STOP += pnts[0].dataValues.UP_PNT_ST;
+                    points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+                    return index + 1;
+                })
+                .catch(err => {
+                    console.error(err);
+                })
             });
         }
-
-        // res.status(200).json(prbs);
-
-        // let getMax = (index) => new Promise((resolve) => {
-        //     USR_PRB.max('UP_PNT', {
-        //         where: {
-        //             UP_UID: id,
-        //             UP_PID: prbs[index]
-        //         }
-        //     })
-        //     .then(maxPnt => {
-        //         resolve(maxPnt);
-        //     })
-        //     .catch(err => {
-        //         console.error(err);
-        //     })
-        // });
-
-        // let addPnt = (index) => new Promise((resolve) => {
-        //     USR_PRB.findAll({
-        //         attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-        //         where: {
-        //             UP_UID: id,
-        //             UP_PID: prbs[index],
-        //             UP_PNT: maxPnt
-        //         }
-        //     })
-        //     .then(pnts => {
-        //         points.TIME += pnts[0].dataValues.UP_PNT_TM;
-        //         points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-        //         points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-        //         points.STOP += pnts[0].dataValues.UP_PNT_ST;
-        //         points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-
-        //         resolve();
-        //     })
-        //     .catch(err => {
-        //         console.error(err);
-        //     });
-        // }
-
-        // async function addPoints(index) {
-        //     await getMax(index);
-        //     await addPnt(index);
-        // };
-
-        // getMax = (index) => {
-        //     return new Promise((resolve, reject) => {
-        //         USR_PRB.max('UP_PNT', {
-        //             where: {
-        //                 UP_UID: id,
-        //                 UP_PID: prbs[index]
-        //             }
-        //         })
-        //         .then(maxPnt => {
-        //             resolve(maxPnt);
-        //         })
-        //         .catch(err => {
-        //             console.error(err);
-        //         });
-        //     });
-        // };
-
-        // addPnt = (index, pnt) => {
-        //     return new Promise((resolve, reject) => {
-        //         USR_PRB.findAll({
-        //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-        //             where: {
-        //                 UP_UID: id,
-        //                 UP_PID: prbs[index],
-        //                 UP_PNT: pnt
-        //             }
-        //         })
-        //         .then(pnts => {
-        //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
-        //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-        //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-        //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
-        //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-
-        //             resolve();
-        //         })
-        //         .catch(err => {
-        //             console.error(err);
-        //         });
-        //     });
-        // };
-
-        // for(var j = 0; j < len; j++) {
-        //     // getMax(j)
-        //     // .then(maxPnt => {
-        //     //     addPnt(j, maxPnt);
-        //     // })
-        //     // .catch(err => {
-        //     //     console.error(err);
-        //     // });
-
-        //     USR_PRB.max('UP_PNT', {
-        //         where: {
-        //             UP_UID: id,
-        //             UP_PID: prbs[j]
-        //         }
-        //     })
-        //     .then(maxPnt => {
-        //         USR_PRB.findAll({
-        //             attributes: ['UP_PNT_TM', 'UP_PNT_LE', 'UP_PNT_RE', 'UP_PNT_ST', 'UP_PNT_MU'],
-        //             where: {
-        //                 UP_UID: id,
-        //                 UP_PID: prbs[j],
-        //                 UP_PNT: maxPnt
-        //             }
-        //         })
-        //         .then(pnts => {
-        //             points.TIME += pnts[0].dataValues.UP_PNT_TM;
-        //             points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
-        //             points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
-        //             points.STOP += pnts[0].dataValues.UP_PNT_ST;
-        //             points.MUCH += pnts[0].dataValues.UP_PNT_MU;
-
-        //             console.log(j + " /// " + pnts);
-        //             if(j === len - 1) {
-        //                 res.status(200).json(points);
-        //             }
-        //         })
-        //         .catch(err => {
-        //             console.error(err);
-        //         });
-        //     })
-        //     .catch(err => {
-        //         console.error(err);
-        //     });
-        // }
-
-        // //res.status(200).json(points);
+        recursive.then(() => {
+            res.status(200).json(points);
+        });
     })
     .catch(err => {
-        console.err(err);
-    });
+        console.error(err);
+    })
 });
-
-// app.post('/test', (req, res) => {
-//     var interval = setInterval(function() {
-//         console.log("test...");
-//     }, 1000);
-
-//     res.status(200).json("timer test");
-// });
-
-// app.post('/repeat', (req, res) => {
-//     var uid = req.body.UID;
-//     var pid = req.body.PID;
-
-//     LOG.max('LOG_SSEQ', {
-//         where: {
-//             LOG_UID: uid,
-//             LOG_PID: pid
-//         }
-//     })
-//     .then(result =>
-//         result
-//         ? result
-//         : 0
-//     )
-//     .then(sseq => {
-//         LOG.findAll({
-//             attributes: ["LOG_BVL"],
-//             where: {
-//                 LOG_UID: uid,
-//                 LOG_pid: pid,
-//                 LOG_SSEQ: 4 // sseq를 넣어야 함, 테스트로 literal을 넣어둠
-//             }
-//         })
-//         .then(results => {
-//             var len = results.length;
-//             var i, j;
-//             var count = 0;
-
-//             for (i = 0; i < len - 3; i++) {
-//                 for (j = i + 1; j< i + 3; j++) {
-//                     if (JSON.stringify(results[j]) != JSON.stringify(results[i])) {
-//                         break;
-//                     }
-//                 }
-//                 if (j == i + 3) {
-//                     count++;
-//                 }
-//             }
-
-//             console.log(count);
-
-//             res.status(200).json(results);
-//         })
-//         .catch(err => {
-//             console.error(err);
-//         });
-//     })
-//     .catch(err => {
-//         console.error(err);
-//     })
-// });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

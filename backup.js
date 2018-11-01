@@ -2,14 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const Sequelize = require("sequelize");
 
-const sequelize = new Sequelize("BBAM", "root", "bbam", {
-  host: "54.180.2.31",
-  dialect: "mysql",
-  define: {
-    freezeTableName: true,
-    timestamps: false
-  }
-});
+
 sequelize
   .authenticate()
   .then(() => {
