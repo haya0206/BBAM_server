@@ -83,7 +83,7 @@ const GM = sequelize.define('GM', {
 
 const PRB = sequelize.define('PRB', {
     PRB_ID: {
-        type: Sequelize.INTEGER.UNSIGNED,
+        type: Sequelize.INTEGER,
         primaryKey: true,
         allowNull: false,
         autoIncrement: true
@@ -94,6 +94,9 @@ const PRB = sequelize.define('PRB', {
     PRB_CLS: {
         type: Sequelize.STRING(10)
     },
+    PRB_NM: {
+        type: Sequelize.STRING(20)
+    },
     PRB_CNT: {
         type: Sequelize.STRING(500)
     },
@@ -103,15 +106,18 @@ const PRB = sequelize.define('PRB', {
     PRB_RTN: {
         type: Sequelize.INTEGER
     },
+    PRB_CD: {
+        type: Sequelize.STRING(5000)
+    },
     PRB_XML: {
-        type: Sequelize.STRING(1000),
+        type: Sequelize.STRING(10000),
         allowNull: false
     }
 });
 
 const ATP = sequelize.define('ATP', {
     ATP_PID: {
-        type: Sequelize.INTEGER.UNSIGNED,
+        type: Sequelize.INTEGER,
         primaryKey: true,
         allowNull: false
     },
@@ -135,7 +141,7 @@ const USR_PRB = sequelize.define('USR_PRB', {
         allowNull: false
     },
     UP_PID: {
-        type: Sequelize.INTEGER.UNSIGNED,
+        type: Sequelize.INTEGER,
         primaryKey: true,
         allowNull: false
     },
@@ -181,7 +187,7 @@ const LOG = sequelize.define('LOG', {
         allowNull: false
     },
     LOG_PID: {
-        type: Sequelize.INTEGER.UNSIGNED,
+        type: Sequelize.INTEGER,
         primaryKey: true,
         allowNull: false
     },
