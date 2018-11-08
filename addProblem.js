@@ -136,30 +136,30 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
       '</shadow>' +
     '</value>' +
   '</block>' +
-  '<block type="operator_unequals" id="operator_unequals">' +
-    '<value name="OPERAND1">' +
-      '<shadow type="text">' +
-        '<field name="TEXT"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="OPERAND2">' +
-      '<shadow type="text">' +
-        '<field name="TEXT"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
-  '<block type="operator_gt" id="operator_gt">' +
-    '<value name="OPERAND1">' +
-      '<shadow type="text">' +
-        '<field name="TEXT"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="OPERAND2">' +
-      '<shadow type="text">' +
-        '<field name="TEXT"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
+//   '<block type="operator_unequals" id="operator_unequals">' +
+//     '<value name="OPERAND1">' +
+//       '<shadow type="text">' +
+//         '<field name="TEXT"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="OPERAND2">' +
+//       '<shadow type="text">' +
+//         '<field name="TEXT"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
+//   '<block type="operator_gt" id="operator_gt">' +
+//     '<value name="OPERAND1">' +
+//       '<shadow type="text">' +
+//         '<field name="TEXT"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="OPERAND2">' +
+//       '<shadow type="text">' +
+//         '<field name="TEXT"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
 //   '<block type="operator_and" id="operator_and"></block>' +
 //   '<block type="operator_or" id="operator_or"></block>' +
 //   '<block type="operator_not" id="operator_not">' +
@@ -169,18 +169,18 @@ var prbText = '<xml id="toolbox-categories" style="display: none">' +
 //       '</shadow>' +
 //     '</value>' +
 //   '</block>' +
-  '<block type="operator_mod" id="operator_mod">' +
-    '<value name="NUM1">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-    '<value name="NUM2">' +
-      '<shadow type="math_number">' +
-        '<field name="NUM"></field>' +
-      '</shadow>' +
-    '</value>' +
-  '</block>' +
+//   '<block type="operator_mod" id="operator_mod">' +
+//     '<value name="NUM1">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//     '<value name="NUM2">' +
+//       '<shadow type="math_number">' +
+//         '<field name="NUM"></field>' +
+//       '</shadow>' +
+//     '</value>' +
+//   '</block>' +
 //   '<block type="operator_round" id="operator_round">' +
 //     '<value name="NUM">' +
 //       '<shadow type="math_number">' +

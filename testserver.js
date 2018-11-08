@@ -390,11 +390,14 @@ app.post("/getProblem", (req, res) => {
                 .then(inout => {
                     var len = inout.length;
 
-                    for(var i = 0; i < len; i++) {
-                        dataValues[0].dataValues.PRB_IN = inout[i].ATP_IN;
-                        dataValues[0].dataValues.PRB_OUT = inout[i].ATP_OUT;
+                    dataValues[0].dataValues.PRB_IN = new Array(len);
+                    dataValues[0].dataValues.PRB_OUT = new Array(len);
 
-                        if(i === len - 1) {
+                    for (var i = 0; i < len; i++) {
+                        dataValues[0].dataValues.PRB_IN[i] = inout[i].ATP_IN;
+                        dataValues[0].dataValues.PRB_OUT[i] = inout[i].ATP_OUT;
+
+                        if (i === len - 1) {
                             res.status(200).json(dataValues);
                         }
                     }
@@ -930,9 +933,10 @@ app.post("/feedback", (req, res) => {
                 })
                 .catch(err => {
                     console.error(err);
-                })
+                });
             });
         }
+
         recursive.then(() => {
             points._TIME = len * 30;
             points._LENGTH = len * 15;
