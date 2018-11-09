@@ -310,8 +310,38 @@ app.post('/getProblemList', (req, res) => {
         }
     )
     .then(dataValues => {
-        // console.log(dataValues);
-        res.status(200).json(dataValues);
+        var refinedArr = new Array();
+        var i;
+        var len = dataValues.length;
+
+        if(diff === 1) {
+            for(i = 0; i < 16; i++) {
+                refinedArr.push(dataValues[i]);
+            }
+            for(; i < len; i += parseInt(Math.random() * 3)) {
+                refinedArr.push(dataValues[i]);
+            }
+        }
+        else if(diff === 2) {
+            for(i = 0; i < 14; i++) {
+                refinedArr.push(dataValues[i]);
+            }
+            i += parseInt(Math.random() * 10);
+            for(; i < len; i += parseInt(Math.random() * 30) + 10) {
+                refinedArr.push(dataValues[i]);
+            }
+        }
+        else if(diff === 3) {
+            for(i = 0; i < 10; i++) {
+                refinedArr.push(dataValues[i]);
+            }
+            i += parseInt(Math.random() * 30);
+            for(; i < len; i += parseInt(Math.random() * 150) + 50) {
+                refinedArr.push(dataValues[i]);
+            }
+        }
+
+        res.status(200).json(refinedArr);
     })
     .catch(err => {
         console.log(err);
