@@ -935,6 +935,7 @@ app.post("/feedback", (req, res) => {
             MUCH: 0
         };
 
+        // 제출하여 맞은 문제에 대해 상세 채점정보를 모두 더함
         for(var i = 0; i < len; i++) {
             recursive = recursive.then(index => {
                 return USR_PRB.max('UP_PNT', {
@@ -968,33 +969,61 @@ app.post("/feedback", (req, res) => {
         }
 
         recursive.then(() => {
+            // 세부 점수에 대한 최고 점수를 같이 보내줌
             points._TIME = len * 30;
             points._LENGTH = len * 15;
             points._REPEAT = len * 20;
             points._STOP = len * 20;
             points._MUCH = len * 15;
 
-            // 여기에 들어가야 랭킹, 제출, 정답, 오답이 들어가야 함
+            // 경험치를 기준으로 랭킹을 산출
             GM.findAll({
                 attributes: [[sequelize.fn('COUNT', sequelize.col('*')), 'count']]
             })
             .then(usrCount => {
                 sequelize.query("SELECT COUNT(*)+1 FROM GM WHERE GM_EXP > (SELECT GM_EXP FROM GM WHERE GM_ID='"+id+"');")
                 .then(ranking => {
-                    console.log(ranking[0][0]['COUNT(*)+1']);
-                    console.log(usrCount[0].dataValues.count);
                     points.ranking = ranking[0][0]['COUNT(*)+1'] + '/' + usrCount[0].dataValues.count;
-                    res.status(200).json(points);
+
+                    // 제출한 문제에 대해 정답과 오답 리스트를 첨부
+                    USR_PRB.findAll({
+                        attributes: ['UP_PID', 'UP_CRCT'],
+                        where: {
+                            UP_UID: id
+                        }
+                    })
+                    .then(submitList => {
+                        points.submitList = submitList;
+                        res.status(200).json(points);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    });
                 })
+                .catch(err => {
+                    console.err(err);
+                });
             })
             .catch(err => {
                 console.error(err);
-            })
+            });
         });
     })
     .catch(err => {
         console.error(err);
     })
+});
+
+app.post("/rank", (req, res) => {
+    GM.findAll({
+        attributes: ['GM_ID', 'GM_EXP']
+    })
+    .then(gmList => {
+        res.status(200).json(gmList);
+    })
+    .catch(err => {
+        console.error(err);
+    });
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
