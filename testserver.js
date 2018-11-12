@@ -973,7 +973,23 @@ app.post("/feedback", (req, res) => {
             points._REPEAT = len * 20;
             points._STOP = len * 20;
             points._MUCH = len * 15;
-            res.status(200).json(points);
+
+            // 여기에 들어가야 랭킹, 제출, 정답, 오답이 들어가야 함
+            GM.findAll({
+                attributes: [[sequelize.fn('COUNT', sequelize.col('*')), 'count']]
+            })
+            .then(usrCount => {
+                sequelize.query("SELECT COUNT(*)+1 FROM GM WHERE GM_EXP > (SELECT GM_EXP FROM GM WHERE GM_ID='"+id+"');")
+                .then(ranking => {
+                    console.log(ranking[0][0]['COUNT(*)+1']);
+                    console.log(usrCount[0].dataValues.count);
+                    points.ranking = ranking[0][0]['COUNT(*)+1'] + '/' + usrCount[0].dataValues.count;
+                    res.status(200).json(points);
+                })
+            })
+            .catch(err => {
+                console.error(err);
+            })
         });
     })
     .catch(err => {
