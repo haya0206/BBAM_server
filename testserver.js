@@ -253,6 +253,7 @@ app.post('/login', (req, res) => {
 app.post('/mainPage', (req, res) => {
     var id = req.body.ID;
     
+    // 유저 닉네임 정보 추가
     USR.findAll({
         attributes: ['USR_NCK'],
         where: {
@@ -260,6 +261,7 @@ app.post('/mainPage', (req, res) => {
         }
     })
     .then(usrNck => {
+        // 경험치 정보 추가
         GM.findAll({
             attributes: ['GM_EXP'],
             where: {
@@ -276,7 +278,24 @@ app.post('/mainPage', (req, res) => {
             results[0].dataValues.GM_LV = lv;
             results[0].dataValues.GM_EXP = exp;
             results[0].dataValues.USR_NCK = usrNck[0].dataValues.USR_NCK;
-            res.status(200).json(results);
+
+            // 랭킹 정보 추가
+            GM.findAll({
+                attributes: [[sequelize.fn('COUNT', sequelize.col('*')), 'count']]
+            })
+            .then(usrCount => {
+                sequelize.query("SELECT COUNT(*)+1 FROM GM WHERE GM_EXP > (SELECT GM_EXP FROM GM WHERE GM_ID='"+id+"');")
+                .then(ranking => {
+                    results[0].dataValues.ranking = ranking[0][0]['COUNT(*)+1'] + '/' + usrCount[0].dataValues.count;
+                    res.status(200).json(results);
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+            });
         })
         .catch(err => {
             console.error(err);
