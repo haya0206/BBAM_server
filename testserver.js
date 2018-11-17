@@ -271,6 +271,7 @@ app.post('/mainPage', (req, res) => {
         .then(results => {
             var lv = 1;
             var exp = results[0].dataValues.GM_EXP;
+            results[0].dataValues.GM_TEXP = exp;
             while(exp > lv * 100) {
                 exp -= lv * 100;
                 lv++;
@@ -337,7 +338,7 @@ app.post('/getProblemList', (req, res) => {
             for(i = 0; i < 16; i++) {
                 refinedArr.push(dataValues[i]);
             }
-            for(; i < len; i += parseInt(Math.random() * 3)) {
+            for(; i < len; i += parseInt(Math.random() * 3) + 1) {
                 refinedArr.push(dataValues[i]);
             }
         }
@@ -1035,10 +1036,71 @@ app.post("/feedback", (req, res) => {
 
 app.post("/rank", (req, res) => {
     GM.findAll({
-        attributes: ['GM_ID', 'GM_EXP']
+        attributes: ['GM_ID', 'GM_RTN']
     })
     .then(gmList => {
         res.status(200).json(gmList);
+    })
+    .catch(err => {
+        console.error(err);
+    });
+});
+
+app.post("/endGame", (req, res) => {
+    var winner = req.body.winner;
+    var loser = req.body.loser;
+
+    GM.findAll({
+        attributes: ['GM_RTN'],
+        where : {
+            GM_ID: winner
+        }
+    })
+    .then(winnerRtn => {
+        GM.findAll({
+            attributes: ['GM_RTN'],
+            where: {
+                GM_ID: loser
+            }
+        })
+        .then(loserRtn => {
+            var wRtn = winnerRtn[0].dataValues.GM_RTN;
+            var lRtn = loserRtn[0].dataValues.GM_RTN;
+            var wVsL = 1 / (1 + Math.pow(10, (lRtn - wRtn) / 400));
+            var lVsW = 1 / (1 + Math.pow(10, (wRtn - lRtn) / 400));
+
+            wRtn += (1 - wVsL) * 32;
+            lRtn += (0 - lVsW) * 32;
+
+            GM.update({
+                GM_RTN: wRtn
+            }, {
+                where: {
+                    GM_ID: winner
+                }
+            })
+            .then(() => {
+                GM.update({
+                    GM_RTN: lRtn
+                }, {
+                    where: {
+                        GM_ID: loser
+                    }
+                })
+                .then(() => {
+                    res.status(200).json("rating update success");
+                })
+                .catch(err => {
+                    console.error(err);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+        });
     })
     .catch(err => {
         console.error(err);
