@@ -285,7 +285,7 @@ app.post('/mainPage', (req, res) => {
                 attributes: [[sequelize.fn('COUNT', sequelize.col('*')), 'count']]
             })
             .then(usrCount => {
-                sequelize.query("SELECT COUNT(*)+1 FROM GM WHERE GM_EXP > (SELECT GM_EXP FROM GM WHERE GM_ID='"+id+"');")
+                sequelize.query("SELECT COUNT(*)+1 FROM GM WHERE GM_RTN > (SELECT GM_RTN FROM GM WHERE GM_ID='"+id+"');")
                 .then(ranking => {
                     results[0].dataValues.ranking = ranking[0][0]['COUNT(*)+1'] + '/' + usrCount[0].dataValues.count;
                     res.status(200).json(results);
