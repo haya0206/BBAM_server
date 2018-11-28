@@ -3,13 +3,13 @@ const cors = require("cors");
 const Sequelize = require("sequelize");
 
 const sequelize = new Sequelize("BBAM", "root", "bbam", {
-    host: "54.180.2.31",
-    dialect: "mysql",
-    define: {
-      freezeTableName: true,
-      timestamps: false
-    }
-  });
+  host: "54.180.2.31",
+  dialect: "mysql",
+  define: {
+    freezeTableName: true,
+    timestamps: false
+  }
+});
 sequelize
   .authenticate()
   .then(() => {
@@ -77,7 +77,7 @@ const GM = sequelize.define("GM", {
 
 const PRB = sequelize.define("PRB", {
   PRB_ID: {
-    type: Sequelize.INTEGER.UNSIGNED,
+    type: Sequelize.INTEGER,
     primaryKey: true,
     allowNull: false,
     autoIncrement: true
@@ -88,24 +88,43 @@ const PRB = sequelize.define("PRB", {
   PRB_CLS: {
     type: Sequelize.STRING(10)
   },
+  PRB_NM: {
+    type: Sequelize.STRING(20)
+  },
   PRB_CNT: {
     type: Sequelize.STRING(500)
   },
   PRB_HNT: {
     type: Sequelize.STRING(500)
   },
-  PRB_IN: {
-    type: Sequelize.STRING(100)
-  },
-  PRB_OUT: {
-    type: Sequelize.STRING(100)
-  },
   PRB_RTN: {
     type: Sequelize.INTEGER
+  },
+  PRB_CD: {
+    type: Sequelize.STRING(5000)
   },
   PRB_XML: {
     type: Sequelize.STRING(1000),
     allowNull: false
+  }
+});
+
+const ATP = sequelize.define("ATP", {
+  ATP_PID: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    allowNull: false
+  },
+  ATP_TID: {
+    type: Sequelize.TINYINT(1).UNSIGNED,
+    primaryKey: true,
+    allowNull: false
+  },
+  ATP_IN: {
+    type: Sequelize.STRING(100)
+  },
+  ATP_OUT: {
+    type: Sequelize.STRING(500)
   }
 });
 
@@ -116,7 +135,7 @@ const USR_PRB = sequelize.define("USR_PRB", {
     allowNull: false
   },
   UP_PID: {
-    type: Sequelize.INTEGER.UNSIGNED,
+    type: Sequelize.INTEGER,
     primaryKey: true,
     allowNull: false
   },
@@ -127,6 +146,21 @@ const USR_PRB = sequelize.define("USR_PRB", {
   },
   UP_CRCT: {
     type: Sequelize.TINYINT(1)
+  },
+  UP_PNT_TM: {
+    type: Sequelize.INTEGER.UNSIGNED
+  },
+  UP_PNT_LE: {
+    type: Sequelize.INTEGER.UNSIGNED
+  },
+  UP_PNT_RE: {
+    type: Sequelize.INTEGER.UNSIGNED
+  },
+  UP_PNT_ST: {
+    type: Sequelize.INTEGER.UNSIGNED
+  },
+  UP_PNT_MU: {
+    type: Sequelize.INTEGER.UNSIGNED
   },
   UP_PNT: {
     type: Sequelize.INTEGER.UNSIGNED
@@ -147,7 +181,7 @@ const LOG = sequelize.define("LOG", {
     allowNull: false
   },
   LOG_PID: {
-    type: Sequelize.INTEGER.UNSIGNED,
+    type: Sequelize.INTEGER,
     primaryKey: true,
     allowNull: false
   },
@@ -208,8 +242,8 @@ app.post("/login", (req, res) => {
       USR_PW: pw
     }
   })
-    .then(
-      results => (results && results.length && results.length > 0 ? 200 : 401)
+    .then(results =>
+      results && results.length && results.length > 0 ? 200 : 401
     )
     .then(result => {
       // console.log(result);
@@ -223,22 +257,62 @@ app.post("/login", (req, res) => {
 app.post("/mainPage", (req, res) => {
   var id = req.body.ID;
 
-  GM.findAll({
-    attributes: ["GM_EXP", "GM_RTN"],
+  // 유저 닉네임 정보 추가
+  USR.findAll({
+    attributes: ["USR_NCK"],
     where: {
-      GM_ID: id
+      USR_ID: id
     }
   })
-    .then(results => {
-      var lv = 1;
-      var exp = results[0].dataValues.GM_EXP;
-      while (exp > lv * 100) {
-        exp -= lv * 100;
-        lv++;
-      }
-      results[0].dataValues.GM_LV = lv;
-      results[0].dataValues.GM_EXP = exp;
-      res.status(200).json(results);
+    .then(usrNck => {
+      // 경험치 정보 추가
+      GM.findAll({
+        attributes: ["GM_EXP", "GM_RTN"],
+        where: {
+          GM_ID: id
+        }
+      })
+        .then(results => {
+          var lv = 1;
+          var exp = results[0].dataValues.GM_EXP;
+          results[0].dataValues.GM_TEXP = exp;
+          while (exp > lv * 100) {
+            exp -= lv * 100;
+            lv++;
+          }
+          results[0].dataValues.GM_LV = lv;
+          results[0].dataValues.GM_EXP = exp;
+          results[0].dataValues.USR_NCK = usrNck[0].dataValues.USR_NCK;
+
+          // 랭킹 정보 추가
+          GM.findAll({
+            attributes: [[sequelize.fn("COUNT", sequelize.col("*")), "count"]]
+          })
+            .then(usrCount => {
+              sequelize
+                .query(
+                  "SELECT COUNT(*)+1 FROM GM WHERE GM_RTN > (SELECT GM_RTN FROM GM WHERE GM_ID='" +
+                    id +
+                    "');"
+                )
+                .then(ranking => {
+                  results[0].dataValues.ranking =
+                    ranking[0][0]["COUNT(*)+1"] +
+                    "/" +
+                    usrCount[0].dataValues.count;
+                  res.status(200).json(results);
+                })
+                .catch(err => {
+                  console.error(err);
+                });
+            })
+            .catch(err => {
+              console.error(err);
+            });
+        })
+        .catch(err => {
+          console.error(err);
+        });
     })
     .catch(err => {
       console.error(err);
@@ -256,18 +330,45 @@ app.post("/getProblemList", (req, res) => {
       // PRB_CLS: cls
     }
   })
-    .then(
-      results =>
-        results && results.length && results.length > 0
-          ? results
-          : {
-              PRB_ID: 0,
-              PRB_CLS: null // 임시로 추가
-            }
+    .then(results =>
+      results && results.length && results.length > 0
+        ? results
+        : {
+            PRB_ID: 0,
+            PRB_CLS: null // 임시로 추가
+          }
     )
     .then(dataValues => {
-      //console.log(dataValues);
-      res.status(200).json(dataValues);
+      var refinedArr = new Array();
+      var i;
+      var len = dataValues.length;
+
+      if (diff === 1) {
+        for (i = 0; i < 16; i++) {
+          refinedArr.push(dataValues[i]);
+        }
+        for (; i < len; i += parseInt(Math.random() * 3) + 1) {
+          refinedArr.push(dataValues[i]);
+        }
+      } else if (diff === 2) {
+        for (i = 0; i < 14; i++) {
+          refinedArr.push(dataValues[i]);
+        }
+        i += parseInt(Math.random() * 10);
+        for (; i < len; i += parseInt(Math.random() * 30) + 10) {
+          refinedArr.push(dataValues[i]);
+        }
+      } else if (diff === 3) {
+        for (i = 0; i < 10; i++) {
+          refinedArr.push(dataValues[i]);
+        }
+        i += parseInt(Math.random() * 30);
+        for (; i < len; i += parseInt(Math.random() * 150) + 50) {
+          refinedArr.push(dataValues[i]);
+        }
+      }
+
+      res.status(200).json(refinedArr);
     })
     .catch(err => {
       console.log(err);
@@ -275,7 +376,6 @@ app.post("/getProblemList", (req, res) => {
 });
 
 // 문제 리스트에서 문제 선택했을 시 문제 정보 전달(return 문제 내용, 문제 힌트, 입력값, 출력값)
-// 문제에서 사용하는 XML도 보내기               // 완료
 app.post("/getProblem", (req, res) => {
   var uid = req.body.UID;
   var pid = req.body.PID;
@@ -296,9 +396,8 @@ app.post("/getProblem", (req, res) => {
           UP_SSEQ: seq
         }
       })
-        .then(
-          result =>
-            result && result.length && result.length > 0 ? result : null
+        .then(result =>
+          result && result.length && result.length > 0 ? result : null
         )
         .then(xml => {
           PRB.findAll({
@@ -308,25 +407,25 @@ app.post("/getProblem", (req, res) => {
               "PRB_NM",
               "PRB_CNT",
               "PRB_HNT",
-              "PRB_IN",
-              "PRB_OUT",
               "PRB_XML"
             ],
             where: {
               PRB_ID: pid
             }
           })
-            .then(
-              results =>
-                results && results.length && results.length > 0
-                  ? results
-                  : {
-                      PRB_CNT: "문제가 없습니다.",
-                      PRB_HNT: "문제가 없습니다.",
-                      PRB_IN: null,
-                      PRB_OUT: null,
-                      PRB_XML: null
-                    }
+            .then(results =>
+              results && results.length && results.length > 0
+                ? results
+                : {
+                    PRB_DIFF: null,
+                    PRB_CLS: null,
+                    PRB_NM: "문제없음",
+                    PRB_CNT: "문제가 없습니다.",
+                    PRB_HNT: "문제가 없습니다.",
+                    PRB_XML: null,
+                    PRB_IN: null,
+                    PRB_OUT: null
+                  }
             )
             .then(dataValues => {
               if (xml === null) {
@@ -334,8 +433,31 @@ app.post("/getProblem", (req, res) => {
               } else {
                 dataValues.push(xml[0]);
               }
-              //console.log(dataValues);
-              res.status(200).json(dataValues);
+
+              ATP.findAll({
+                attributes: ["ATP_IN", "ATP_OUT"],
+                where: {
+                  ATP_PID: pid
+                }
+              })
+                .then(inout => {
+                  var len = inout.length;
+
+                  dataValues[0].dataValues.PRB_IN = new Array(len);
+                  dataValues[0].dataValues.PRB_OUT = new Array(len);
+
+                  for (var i = 0; i < len; i++) {
+                    dataValues[0].dataValues.PRB_IN[i] = inout[i].ATP_IN;
+                    dataValues[0].dataValues.PRB_OUT[i] = inout[i].ATP_OUT;
+
+                    if (i === len - 1) {
+                      res.status(200).json(dataValues);
+                    }
+                  }
+                })
+                .catch(err => {
+                  console.error(err);
+                });
             })
             .catch(err => {
               console.log(err);
@@ -372,6 +494,11 @@ app.post("/submit", (req, res) => {
         UP_PID: pid,
         UP_SSEQ: dataValue + 1,
         UP_CRCT: crct,
+        UP_PNT_TM: 0,
+        UP_PNT_LE: 0,
+        UP_PNT_RE: 0,
+        UP_PNT_ST: 0,
+        UP_PNT_MU: 0,
         UP_PNT: 0,
         UP_XML: xml
       })
@@ -406,9 +533,13 @@ app.post("/submit", (req, res) => {
                 var stop = req.body.stop;
                 var much = req.body.much;
 
-                if (time < 2000.0) {
+                if (time < 1000.0) {
                   addedPoint += 30;
                   points.TIME += 30;
+                }
+                if (xml.length < 10000) {
+                  addedPoint += 15;
+                  points.LENGTH += 15;
                 }
                 if (stop === 0) {
                   addedPoint += 20;
@@ -417,10 +548,6 @@ app.post("/submit", (req, res) => {
                 if (much === 0) {
                   addedPoint += 15;
                   points.MUCH += 15;
-                }
-                if (xml.length < 10000) {
-                  addedPoint += 15;
-                  points.LENGTH += 15;
                 }
 
                 // 제출한 문제의 시도 횟수 확인
@@ -471,6 +598,11 @@ app.post("/submit", (req, res) => {
                         // 제출한 문제의 추가 점수 정보 저장
                         USR_PRB.update(
                           {
+                            UP_PNT_TM: points.TIME,
+                            UP_PNT_LE: points.LENGTH,
+                            UP_PNT_RE: points.REPEAT,
+                            UP_PNT_ST: points.STOP,
+                            UP_PNT_MU: points.MUCH,
                             UP_PNT: addedPoint
                           },
                           {
@@ -796,6 +928,212 @@ app.post("/log", (req, res) => {
   //     })
   // })
 });
+
+app.post("/feedback", (req, res) => {
+  var id = req.body.ID;
+
+  USR_PRB.findAll({
+    where: {
+      UP_UID: id
+    }
+  })
+    .then(prbss => {
+      var prbs = new Array();
+      var lens = prbss.length;
+
+      // for문 안에 for문 구조 변경
+      // 먼저 정보를 전부 들고온 뒤에 해당 정보를 가공하여 반환
+      for (var i = 0; i < lens; i++) {
+        if (prbs.indexOf(prbss[i].dataValues.UP_PID) === -1) {
+          prbs.push(prbss[i].dataValues.UP_PID);
+        }
+      }
+
+      return prbs;
+    })
+    .then(prbs => {
+      var len = prbs.length;
+      var recursive = Promise.resolve(0);
+      var points = {
+        TIME: 0,
+        LENGTH: 0,
+        REPEAT: 0,
+        STOP: 0,
+        MUCH: 0
+      };
+
+      // 제출하여 맞은 문제에 대해 상세 채점정보를 모두 더함
+      for (var i = 0; i < len; i++) {
+        recursive = recursive.then(index => {
+          return USR_PRB.max("UP_PNT", {
+            where: {
+              UP_UID: id,
+              UP_PID: prbs[index]
+            }
+          })
+            .then(maxPnt => {
+              return USR_PRB.findAll({
+                attributes: [
+                  "UP_PNT_TM",
+                  "UP_PNT_LE",
+                  "UP_PNT_RE",
+                  "UP_PNT_ST",
+                  "UP_PNT_MU"
+                ],
+                where: {
+                  UP_UID: id,
+                  UP_PID: prbs[index],
+                  UP_PNT: maxPnt
+                }
+              });
+            })
+            .then(pnts => {
+              points.TIME += pnts[0].dataValues.UP_PNT_TM;
+              points.LENGTH += pnts[0].dataValues.UP_PNT_LE;
+              points.REPEAT += pnts[0].dataValues.UP_PNT_RE;
+              points.STOP += pnts[0].dataValues.UP_PNT_ST;
+              points.MUCH += pnts[0].dataValues.UP_PNT_MU;
+              return index + 1;
+            })
+            .catch(err => {
+              console.error(err);
+            });
+        });
+      }
+      recursive.then(() => {
+        // 세부 점수에 대한 최고 점수를 같이 보내줌
+        points._TIME = len * 30;
+        points._LENGTH = len * 15;
+        points._REPEAT = len * 20;
+        points._STOP = len * 20;
+        points._MUCH = len * 15;
+
+        // 경험치를 기준으로 랭킹을 산출
+        GM.findAll({
+          attributes: [[sequelize.fn("COUNT", sequelize.col("*")), "count"]]
+        })
+          .then(usrCount => {
+            sequelize
+              .query(
+                "SELECT COUNT(*)+1 FROM GM WHERE GM_RTN > (SELECT GM_RTN FROM GM WHERE GM_ID='" +
+                  id +
+                  "');"
+              )
+              .then(ranking => {
+                points.ranking =
+                  ranking[0][0]["COUNT(*)+1"] +
+                  "/" +
+                  usrCount[0].dataValues.count;
+
+                // 제출한 문제에 대해 정답과 오답 리스트를 첨부
+                USR_PRB.findAll({
+                  attributes: ["UP_PID", "UP_CRCT"],
+                  where: {
+                    UP_UID: id
+                  }
+                })
+                  .then(submitList => {
+                    points.submitList = submitList;
+                    res.status(200).json(points);
+                  })
+                  .catch(err => {
+                    console.error(err);
+                  });
+              })
+              .catch(err => {
+                console.error(err);
+              });
+          })
+          .catch(err => {
+            console.error(err);
+          });
+      });
+    })
+    .catch(err => {
+      console.error(err);
+    });
+});
+
+app.post("/rank", (req, res) => {
+  GM.findAll({
+    attributes: ["GM_ID", "GM_RTN"]
+  })
+    .then(gmList => {
+      res.status(200).json(gmList);
+    })
+    .catch(err => {
+      console.error(err);
+    });
+});
+
+app.post("/endGame", (req, res) => {
+  var winner = req.body.winner;
+  var loser = req.body.loser;
+
+  GM.findAll({
+    attributes: ["GM_RTN"],
+    where: {
+      GM_ID: winner
+    }
+  })
+    .then(winnerRtn => {
+      GM.findAll({
+        attributes: ["GM_RTN"],
+        where: {
+          GM_ID: loser
+        }
+      })
+        .then(loserRtn => {
+          var wRtn = winnerRtn[0].dataValues.GM_RTN;
+          var lRtn = loserRtn[0].dataValues.GM_RTN;
+          var wVsL = 1 / (1 + Math.pow(10, (lRtn - wRtn) / 400));
+          var lVsW = 1 / (1 + Math.pow(10, (wRtn - lRtn) / 400));
+
+          wRtn += (1 - wVsL) * 32;
+          lRtn += (0 - lVsW) * 32;
+
+          GM.update(
+            {
+              GM_RTN: wRtn
+            },
+            {
+              where: {
+                GM_ID: winner
+              }
+            }
+          )
+            .then(() => {
+              GM.update(
+                {
+                  GM_RTN: lRtn
+                },
+                {
+                  where: {
+                    GM_ID: loser
+                  }
+                }
+              )
+                .then(() => {
+                  res.status(200).json("rating update success");
+                })
+                .catch(err => {
+                  console.error(err);
+                });
+            })
+            .catch(err => {
+              console.error(err);
+            });
+        })
+        .catch(err => {
+          console.error(err);
+        });
+    })
+    .catch(err => {
+      console.error(err);
+    });
+});
+
+let noProblems = [-40, -39, -30, -29, -20, -10];
 let users = {};
 let rooms = {};
 let roomIdCount = 0;
@@ -803,7 +1141,7 @@ io.on("connection", socket => {
   const { id, name, rating, rank } = socket.handshake.query;
   const socketId = socket.id;
   users[socketId] = { name, id, rating, rank };
-  socket.emit("logined", { socketId, name, id, rating, rank });
+  socket.emit("logined", { socketId, name, id, rating, rank }, users);
   socket.broadcast.emit("addList", { socketId, name, id, rating, rank });
   socket.on("reqList", () => {
     socket.emit("list", users);
@@ -813,12 +1151,18 @@ io.on("connection", socket => {
     io.to(user.socketId).emit("invite", anotherUser);
   });
   socket.on("inviteAllow", (user, bool) => {
+    problemNum = noProblems[Math.floor(Math.random() * 6)];
     if (bool) {
       rooms[`${roomIdCount}`] = { members: [id, user.id] };
-      socket.emit("roomId", `${roomIdCount}`, "1");
+      socket.emit("roomId", `${roomIdCount}`, `${problemNum}`);
       socket.join(`${roomIdCount}`);
     }
-    io.to(user.socketId).emit("inviteAllow", bool, `${roomIdCount}`, "1");
+    io.to(user.socketId).emit(
+      "inviteAllow",
+      bool,
+      `${roomIdCount}`,
+      `${problemNum}`
+    );
   });
   socket.on("join", () => {
     socket.join(`${roomIdCount}`);
@@ -827,16 +1171,19 @@ io.on("connection", socket => {
   socket.on("success", id => {
     socket.broadcast.to(id).emit("end");
     console.log("성공", id, rooms);
-    io.of("https://bbam.tk")
+    io.of("https://bbam.study")
       .in(id)
       .clients((error, socketIds) => {
         if (error) throw error;
 
         socketIds.forEach(socketId =>
-          io.of("https://bbam.tk").adapter.remoteLeave(socketId, id)
+          io.of("https://bbam.study").adapter.remoteLeave(socketId, id)
         );
       });
     delete rooms[id];
+  });
+  socket.on("infoChange", (socketId, user) => {
+    users[socketId] = user;
   });
   socket.on("disconnect", () => {
     socket.broadcast.emit("delList", socketId);

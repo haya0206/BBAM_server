@@ -17,7 +17,14 @@ var object = require('lodash/fp/object');
 var at = require('lodash/at');
 var curryN = require('lodash/fp/curryN');
 
-
+const sequelize = new Sequelize("BBAM", "root", "bbam", {
+  host: "54.180.2.31",
+  dialect: "mysql",
+  define: {
+    freezeTableName: true,
+    timestamps: false
+  }
+});
 sequelize.authenticate().then(() => {
     console.log('Connection has been established successfully.');
 }).catch(err => {
